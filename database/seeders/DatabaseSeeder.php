@@ -11,7 +11,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Andere seeders kun je hier ook toevoegen
         $this->call([
             CoachesSeeder::class,
         ]);
