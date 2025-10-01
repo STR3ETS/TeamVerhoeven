@@ -2,47 +2,57 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'name', 'email', 'password', 'role',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password', 'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+    ];
+
+    // Profielen per rol
+    public function clientProfile()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasOne(ClientProfile::class, 'user_id');
     }
+
+    public function coachProfile()
+    {
+        return $this->hasOne(CoachProfile::class, 'user_id');
+    }
+
+    // Als coach: alle clients die aan mij gekoppeld zijn
+    public function clients()
+    {
+        return $this->hasMany(ClientProfile::class, 'coach_id')->with('user');
+    }
+
+    // Als client: alle intakes
+    public function intakes()
+    {
+        return $this->hasMany(Intake::class, 'client_id');
+    }
+
+    // Als client: orders
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'client_id');
+    }
+
+    // Helpers
+    public function isClient(): bool { return $this->role === 'client'; }
+    public function isCoach(): bool  { return $this->role === 'coach'; }
+    public function isAdmin(): bool  { return $this->role === 'admin'; }
 }
