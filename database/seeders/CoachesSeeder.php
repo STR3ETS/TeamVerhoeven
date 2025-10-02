@@ -39,7 +39,7 @@ class CoachesSeeder extends Seeder
                 [
                     'avatar_url'  => null,
                     'bio'         => null,
-                    'specialties' => [],      // bijv. ["hardlopen","kracht"]
+                    'specialties' => [],
                     'is_active'   => true,
                 ]
             );
