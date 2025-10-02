@@ -50,7 +50,6 @@ class ClientProfile extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // De toegewezen coach
     public function coach()
     {
         return $this->belongsTo(User::class, 'coach_id');

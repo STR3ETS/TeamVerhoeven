@@ -37,7 +37,6 @@ class Order extends Model
         return $this->belongsTo(Intake::class);
     }
 
-    // Handige accessors
     public function getAmountEuroAttribute(): float
     {
         return $this->amount_cents / 100;
