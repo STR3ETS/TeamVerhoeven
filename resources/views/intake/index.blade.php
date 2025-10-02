@@ -170,49 +170,51 @@
       <div>
         <h3 class="text-md font-semibold mb-4">Welke coach heeft je voorkeur?</h3>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50">
-            <input type="radio" name="preferred_coach" value="roy"   x-model="form.preferred_coach" class="sr-only peer">
-            <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
-                        peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
-              <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.364 7.364a1 1 0 0 1-1.414 0L3.293 9.435a1 1 0 1 1 1.414-1.414l3.05 3.05 6.657-6.657a1 1 0 0 1 1.414 0z" clip-rule="evenodd"/>
-              </svg>
-            </span>
-            <span class="text-sm font-medium">Roy</span>
+        <div class="grid grid-cols-4 gap-3 mb-6">
+          <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
+            <img src="/assets/roy.webp" alt="Roy" class="mb-4">
+            <div class="flex items-center gap-3 ">
+              <input type="radio" name="preferred_coach" value="roy"   x-model="form.preferred_coach" class="sr-only peer">
+              <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
+                          peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
+              </span>
+              <span class="text-sm font-medium">Roy</span>
+            </div>
           </label>
 
-          <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50">
-            <input type="radio" name="preferred_coach" value="eline" x-model="form.preferred_coach" class="sr-only peer">
-            <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
-                        peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
-              <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.364 7.364a1 1 0 0 1-1.414 0L3.293 9.435a1 1 0 1 1 1.414-1.414l3.05 3.05 6.657-6.657a1 1 0 0 1 1.414 0z" clip-rule="evenodd"/>
-              </svg>
-            </span>
-            <span class="text-sm font-medium">Eline</span>
+          <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
+            <img src="/assets/eline.webp" alt="Eline" class="mb-4">
+            <div class="flex items-center gap-3 ">
+              <input type="radio" name="preferred_coach" value="eline" x-model="form.preferred_coach" class="sr-only peer">
+              <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
+                          peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
+              </span>
+              <span class="text-sm font-medium">Eline</span>
+            </div>
           </label>
 
-          <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50">
-            <input type="radio" name="preferred_coach" value="nicky" x-model="form.preferred_coach" class="sr-only peer">
-            <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
-                        peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
-              <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.364 7.364a1 1 0 0 1-1.414 0L3.293 9.435a1 1 0 1 1 1.414-1.414l3.05 3.05 6.657-6.657a1 1 0 0 1 1.414 0z" clip-rule="evenodd"/>
-              </svg>
-            </span>
-            <span class="text-sm font-medium">Nicky</span>
+          <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
+            <img src="/assets/nicky.webp" alt="Nicky" class="mb-4">
+            <div class="flex items-center gap-3 ">
+              <input type="radio" name="preferred_coach" value="nicky" x-model="form.preferred_coach" class="sr-only peer">
+              <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
+                          peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
+              </span>
+              <span class="text-sm font-medium">Nicky</span>
+            </div>
           </label>
 
-          <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50">
-            <input type="radio" name="preferred_coach" value="none"  x-model="form.preferred_coach" class="sr-only peer">
-            <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
-                        peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
-              <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.364 7.364a1 1 0 0 1-1.414 0L3.293 9.435a1 1 0 1 1 1.414-1.414l3.05 3.05 6.657-6.657a1 1 0 0 1 1.414 0z" clip-rule="evenodd"/>
-              </svg>
-            </span>
-            <span class="text-sm font-medium">Geen voorkeur</span>
+          <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
+            <div class="w-full h-[223.2px] bg-gray-100 rounded-xl mb-4 flex items-center justify-center">
+              <i class="fa-solid fa-user fa-2xl text-gray-300"></i>
+            </div>
+            <div class="flex items-center gap-3">
+              <input type="radio" name="preferred_coach" value="none"  x-model="form.preferred_coach" class="sr-only peer">
+              <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
+                          peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
+              </span>
+              <span class="text-sm font-medium">Geen voorkeur</span>
+            </div>
           </label>
         </div>
 
