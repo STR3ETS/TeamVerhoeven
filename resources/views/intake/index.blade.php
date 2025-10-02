@@ -4,6 +4,10 @@
 @section('content')
 <style>
   .iti { width: 100% !important; } /* intl-tel-input wrapper full width */
+
+  /* Swiper helpers */
+  .packages-swiper .swiper-wrapper { align-items: stretch; }
+  .packages-swiper .swiper-slide > .relative { height: 100%; }
 </style>
 
 @php
@@ -13,6 +17,7 @@
 @endphp
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
 <div class="max-w-3xl mx-auto" x-data="intakeWizard()" x-init="init()">
   <h1 class="text-2xl font-bold mb-2 flex items-center">
@@ -109,7 +114,6 @@
                        :class="errors.postcode ? 'border-red-500 focus:border-red-500' : ''">
               </div>
             </div>
-            <p class="text-xs text-black/50 mt-1">NL: 1234 AB &nbsp;/&nbsp; BE: 1000–9999</p>
           </div>
 
           <!-- Geslacht (custom radios) -->
@@ -161,12 +165,30 @@
       </div>
     </template>
 
-    <!-- STEP 1: Pakket kiezen (zonder radios; knoppen kiezen & door) -->
+    <!-- STEP 1: Pakket kiezen -->
     <template x-if="step === 1">
       <div>
-        <h3 class="text-md font-semibold mb-4">Kies je pakket</h3>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-md font-semibold">Kies je pakket</h3>
 
-        <div class="grid grid-cols-1 gap-4 mb-6">
+          <!-- Adaptieve navigatieknop -->
+          <button type="button"
+                  class="w-8 h-8 cursor-pointer rounded-lg border border-gray-300 text-sm hover:bg-gray-50 transition flex items-center justify-between"
+                  x-show="swiperReady && (swiperAtStart || swiperAtEnd)"
+                  x-transition
+                  @click="swiperAtStart ? swiperNext() : swiperPrev()">
+            <!-- Right arrow when at start -->
+            <i x-show="swiperAtStart" class="fa-solid fa-right-long fa-sm pl-2.25 opacity-25"></i>
+
+            <!-- Left arrow when at end -->
+            <i x-show="swiperAtEnd" class="fa-solid fa-right-long fa-sm pr-2 opacity-25 fa-flip-horizontal"></i>
+          </button>
+        </div>
+
+        <div class="relative mb-6">
+          <div class="swiper packages-swiper px-6">
+            <div class="swiper-wrapper">
+
 @php
   $packages = [
     [
@@ -176,63 +198,42 @@
       'badge' => '10,- korting per 4 weken bij 24 weken traject!',
       'cta' => ['discount' => '10,- Korting'],
       'feature_groups' => [
-        [
-          'title' => 'Dashboard',
-          'items' => [
-            ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
-            ['text' => '30 min call met coach', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Gratis intake',
-          'items' => [
-            ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Intesten',
-          'items' => [
-            ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Trainingsschema',
-          'items' => [
-            ['text' => 'Persoonlijk afgestemd', 'on' => true],
-            ['text' => 'Tot 7 dagen per week gevuld', 'on' => true],
-            ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
-            ['text' => 'Mogelijkheid tot aanpassen trainingsplan, indien nodig maandelijks', 'on' => true],
-            ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Begeleiding Trainingsschema',
-          'items' => [
-            ['text' => 'Inzage techniek en filmpjes', 'on' => true],
-            ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
-            ['text' => 'Maandelijkse check-up trainingsplan', 'on' => true],
-            ['text' => 'Updates via de app', 'on' => true],
-            ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Eindtest',
-          'items' => [
-            ['text' => 'Progressie vaststellen', 'on' => true],
-            ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
-            ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Kortingen + Prijzen',
-          'items' => [
-            ['text' => '10% militair / veteraan korting', 'on' => true],
-            ['text' => '15% 2BeFit Supplements korting', 'on' => true],
-            ['text' => '15% PT 2BeFit korting', 'on' => true],
-            ['text' => '25% Duo PT 2BeFit korting', 'on' => true],
-            ['text' => 'Prijs per 4 weken', 'on' => true],
-          ],
-        ],
+        ['title' => 'Dashboard','items' => [
+          ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
+          ['text' => '30 min call met coach', 'on' => true],
+        ]],
+        ['title' => 'Gratis intake','items' => [
+          ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
+        ]],
+        ['title' => 'Intesten','items' => [
+          ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
+        ]],
+        ['title' => 'Trainingsschema','items' => [
+          ['text' => 'Persoonlijk afgestemd', 'on' => true],
+          ['text' => 'Tot 7 dagen per week gevuld', 'on' => true],
+          ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
+          ['text' => 'Mogelijkheid tot aanpassen trainingsplan, indien nodig maandelijks', 'on' => true],
+          ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => true],
+        ]],
+        ['title' => 'Begeleiding Trainingsschema','items' => [
+          ['text' => 'Inzage techniek en filmpjes', 'on' => true],
+          ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
+          ['text' => 'Maandelijkse check-up trainingsplan', 'on' => true],
+          ['text' => 'Updates via de app', 'on' => true],
+          ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => true],
+        ]],
+        ['title' => 'Eindtest','items' => [
+          ['text' => 'Progressie vaststellen', 'on' => true],
+          ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
+          ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
+        ]],
+        ['title' => 'Kortingen + Prijzen','items' => [
+          ['text' => '10% militair / veteraan korting', 'on' => true],
+          ['text' => '15% 2BeFit Supplements korting', 'on' => true],
+          ['text' => '15% PT 2BeFit korting', 'on' => true],
+          ['text' => '25% Duo PT 2BeFit korting', 'on' => true],
+          ['text' => 'Prijs per 4 weken', 'on' => true],
+        ]],
       ],
     ],
     [
@@ -242,62 +243,41 @@
       'badge' => '5,- korting per 4 weken bij 24 weken traject!',
       'cta' => ['discount' => '5,- Korting'],
       'feature_groups' => [
-        [
-          'title' => 'Dashboard',
-          'items' => [
-            ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
-            ['text' => '30 min call met coach', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Gratis intake',
-          'items' => [
-            ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Intesten',
-          'items' => [
-            ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Trainingsschema',
-          'items' => [
-            ['text' => 'Persoonlijk afgestemd', 'on' => true],
-            ['text' => 'Tot 6 dagen per week gevuld', 'on' => true],
-            ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
-            ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken indien nodig', 'on' => true],
-            ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => false],
-          ],
-        ],
-        [
-          'title' => 'Begeleiding Trainingsschema',
-          'items' => [
-            ['text' => 'Inzage techniek en filmpjes', 'on' => true],
-            ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
-            ['text' => 'Maandelijkse check-up trainingsplan', 'on' => true],
-            ['text' => 'Updates via de app', 'on' => true],
-            ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Eindtest',
-          'items' => [
-            ['text' => 'Progressie vaststellen', 'on' => true],
-            ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
-            ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Kortingen + Prijzen',
-          'items' => [
-            ['text' => '10% militair / veteraan korting', 'on' => true],
-            ['text' => '15% 2BeFit Supplements korting', 'on' => true],
-            ['text' => '10% PT 2BeFit korting', 'on' => true],
-            ['text' => 'Prijs per 4 weken', 'on' => true],
-          ],
-        ],
+        ['title' => 'Dashboard','items' => [
+          ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
+          ['text' => '30 min call met coach', 'on' => true],
+        ]],
+        ['title' => 'Gratis intake','items' => [
+          ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
+        ]],
+        ['title' => 'Intesten','items' => [
+          ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
+        ]],
+        ['title' => 'Trainingsschema','items' => [
+          ['text' => 'Persoonlijk afgestemd', 'on' => true],
+          ['text' => 'Tot 6 dagen per week gevuld', 'on' => true],
+          ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
+          ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken indien nodig', 'on' => true],
+          ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => false],
+        ]],
+        ['title' => 'Begeleiding Trainingsschema','items' => [
+          ['text' => 'Inzage techniek en filmpjes', 'on' => true],
+          ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
+          ['text' => 'Maandelijkse check-up trainingsplan', 'on' => true],
+          ['text' => 'Updates via de app', 'on' => true],
+          ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => true],
+        ]],
+        ['title' => 'Eindtest','items' => [
+          ['text' => 'Progressie vaststellen', 'on' => true],
+          ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
+          ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
+        ]],
+        ['title' => 'Kortingen + Prijzen','items' => [
+          ['text' => '10% militair / veteraan korting', 'on' => true],
+          ['text' => '15% 2BeFit Supplements korting', 'on' => true],
+          ['text' => '10% PT 2BeFit korting', 'on' => true],
+          ['text' => 'Prijs per 4 weken', 'on' => true],
+        ]],
       ],
     ],
     [
@@ -307,119 +287,101 @@
       'badge' => '5,- korting per 4 weken bij 24 weken traject!',
       'cta' => ['discount' => '5,- Korting'],
       'feature_groups' => [
-        [
-          'title' => 'Dashboard',
-          'items' => [
-            ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
-            ['text' => '30 min call met coach', 'on' => false],
-          ],
-        ],
-        [
-          'title' => 'Gratis intake',
-          'items' => [
-            ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Intesten',
-          'items' => [
-            ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
-          ],
-        ],
-        [
-          'title' => 'Trainingsschema',
-          'items' => [
-            ['text' => 'Persoonlijk afgestemd', 'on' => true],
-            ['text' => 'Tot 6 dagen per week gevuld', 'on' => true],
-            ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
-            ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken indien nodig', 'on' => false],
-            ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => false],
-          ],
-        ],
-        [
-          'title' => 'Begeleiding Trainingsschema',
-          'items' => [
-            ['text' => 'Inzage techniek en filmpjes', 'on' => true],
-            ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
-            ['text' => 'Maandelijkse check-up trainingsplan', 'on' => false],
-            ['text' => 'Updates via de app', 'on' => false],
-            ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => false],
-          ],
-        ],
-        [
-          'title' => 'Eindtest',
-          'items' => [
-            ['text' => 'Progressie vaststellen', 'on' => true],
-            ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
-            ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => false],
-          ],
-        ],
-        [
-          'title' => 'Kortingen + Prijzen',
-          'items' => [
-            ['text' => '10% militair / veteraan korting', 'on' => true],
-            ['text' => 'Prijs per 4 weken', 'on' => true],
-          ],
-        ],
+        ['title' => 'Dashboard','items' => [
+          ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
+          ['text' => '30 min call met coach', 'on' => false],
+        ]],
+        ['title' => 'Gratis intake','items' => [
+          ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
+        ]],
+        ['title' => 'Intesten','items' => [
+          ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
+        ]],
+        ['title' => 'Trainingsschema','items' => [
+          ['text' => 'Persoonlijk afgestemd', 'on' => true],
+          ['text' => 'Tot 6 dagen per week gevuld', 'on' => true],
+          ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
+          ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken indien nodig', 'on' => false],
+          ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => false],
+        ]],
+        ['title' => 'Begeleiding Trainingsschema','items' => [
+          ['text' => 'Inzage techniek en filmpjes', 'on' => true],
+          ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
+          ['text' => 'Maandelijkse check-up trainingsplan', 'on' => false],
+          ['text' => 'Updates via de app', 'on' => false],
+          ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => false],
+        ]],
+        ['title' => 'Eindtest','items' => [
+          ['text' => 'Progressie vaststellen', 'on' => true],
+          ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
+          ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => false],
+        ]],
+        ['title' => 'Kortingen + Prijzen','items' => [
+          ['text' => '10% militair / veteraan korting', 'on' => true],
+          ['text' => 'Prijs per 4 weken', 'on' => true],
+        ]],
       ],
     ],
   ];
 @endphp
 
 @foreach ($packages as $pkg)
-  <div class="relative block rounded-2xl border p-4 transition hover:shadow-sm border-gray-300">
-    <div class="flex flex-col gap-6">
-      <div class="flex flex-col gap-4">
-        <h4 class="font-bold text-lg text-black -mb-4">{{ $pkg['title'] }}</h4>
+  <div class="swiper-slide">
+    <div class="relative block rounded-2xl border p-4 transition hover:shadow-sm border-gray-300 h-full">
+      <div class="flex flex-col gap-6 h-full">
+        <div class="flex flex-col gap-4">
+          <h4 class="font-bold text-lg text-black -mb-4">{{ $pkg['title'] }}</h4>
 
-        <div>
-          <p class="text-3xl font-black text-black">
-            {{ $pkg['price']['label'] }} <span class="text-sm">{{ $pkg['price']['suffix'] }}</span>
+          <div>
+            <p class="text-3xl font-black text-black">
+              {{ $pkg['price']['label'] }} <span class="text-sm">{{ $pkg['price']['suffix'] }}</span>
+            </p>
+            <span class="text-xs text-gray-500">{{ $pkg['price']['total'] }}</span>
+          </div>
+
+          <p class="px-2 py-1 bg-[#c8ab7a]/75 text-white text-xs font-semibold rounded w-fit">
+            {{ $pkg['badge'] }}
           </p>
-          <span class="text-xs text-gray-500">{{ $pkg['price']['total'] }}</span>
+
+          <hr class="border-gray-200">
+
+          <ul class="flex flex-col gap-4">
+            @foreach ($pkg['feature_groups'] as $group)
+              <div class="flex flex-col gap-2">
+                <li class="text-sm font-bold">{{ $group['title'] }}</li>
+                @foreach ($group['items'] as $item)
+                  @php $on = $item['on']; @endphp
+                  <li class="flex items-center gap-4">
+                    <i class="fa-solid fa-check {{ $on ? 'text-green-500' : 'text-gray-300' }}"></i>
+                    <p class="text-xs font-semibold {{ $on ? 'text-black' : 'text-gray-400' }}">{{ $item['text'] }}</p>
+                  </li>
+                @endforeach
+              </div>
+            @endforeach
+          </ul>
+
+          <hr class="border-gray-200">
         </div>
 
-        <p class="px-2 py-1 bg-[#c8ab7a]/75 text-white text-xs font-semibold rounded w-fit">
-          {{ $pkg['badge'] }}
-        </p>
+        <div class="mt-auto flex flex-wrap gap-2">
+          <button type="button" class="{{ $btnPrimary }}"
+                  @click="choosePackage('{{ $pkg['key'] }}', 24)">
+            24 weken traject kiezen
+            <span class="px-2 py-1 text-xs ml-2 rounded bg-[#e5c791]">{{ $pkg['cta']['discount'] }}</span>
+          </button>
 
-        <hr class="border-gray-200">
-
-        <ul class="flex flex-col gap-4">
-          @foreach ($pkg['feature_groups'] as $group)
-            <div class="flex flex-col gap-2">
-              <li class="text-sm font-bold">{{ $group['title'] }}</li>
-              @foreach ($group['items'] as $item)
-                @php
-                  $on = $item['on'];
-                @endphp
-                <li class="flex items-center gap-4">
-                  <i class="fa-solid fa-check {{ $on ? 'text-green-500' : 'text-gray-300' }}"></i>
-                  <p class="text-xs font-semibold {{ $on ? 'text-black' : 'text-gray-400' }}">{{ $item['text'] }}</p>
-                </li>
-              @endforeach
-            </div>
-          @endforeach
-        </ul>
-
-        <hr class="border-gray-200">
-      </div>
-
-      <div class="flex flex-wrap gap-2">
-        <button type="button" class="{{ $btnPrimary }}"
-                @click="choosePackage('{{ $pkg['key'] }}', 24)">
-          24 weken traject kiezen
-          <span class="px-2 py-1 text-xs ml-2 rounded bg-[#e5c791]">{{ $pkg['cta']['discount'] }}</span>
-        </button>
-
-        <button type="button" class="{{ $btnPrimary }}"
-                @click="choosePackage('{{ $pkg['key'] }}', 12)">
-          12 weken traject kiezen
-        </button>
+          <button type="button" class="{{ $btnPrimary }}"
+                  @click="choosePackage('{{ $pkg['key'] }}', 12)">
+            12 weken traject kiezen
+          </button>
+        </div>
       </div>
     </div>
   </div>
 @endforeach
+
+            </div>
+          </div>
         </div>
 
         <div class="flex items-center justify-between gap-2">
@@ -457,15 +419,18 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
   function intakeWizard() {
     const STORAGE_KEY = 'intakeWizard_v1';
 
     return {
+      // stappen
       steps: [0,1,2],
       step: 0,
       get totalSteps() { return this.steps.length },
 
+      // formulier
       form: {
         name: '',
         email: '',
@@ -478,10 +443,19 @@
         package: '',         // pakket_a | pakket_b | pakket_c
         duration: null,      // 12 | 24
       },
+
+      // state
       errors: {},
       _iti: null,
       _saveDebounced: null,
 
+      // --- Swiper state ---
+      _swiper: null,
+      swiperReady: false,
+      swiperAtStart: true,
+      swiperAtEnd: false,
+
+      // utils
       debounce(fn, delay = 250) {
         let t;
         return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), delay); };
@@ -508,12 +482,22 @@
         this.$watch('form', () => this._saveDebounced());
         this.$watch('step', (val, oldVal) => {
           this._saveDebounced();
-          // beheer tel instance i.v.m. x-if
+
+          // intl-tel-input beheer i.v.m. x-if
           if (oldVal === 0) this.destroyTelInput();
           if (val === 0) this.$nextTick(() => this.initTelInput());
+
+          // Swiper init/destroy op stap 1
+          if (val === 1) {
+            this.$nextTick(() => {
+              initPackagesSwiperAndBind();
+            });
+          } else if (oldVal === 1) {
+            this.destroyPackagesSwiper();
+          }
         });
 
-        // DOB + tel init op eerste render
+        // eerste render: min/max DOB + tel-init indien stap 0
         this.$nextTick(() => {
           const el = document.getElementById('dob');
           if (el) {
@@ -525,6 +509,16 @@
             el.setAttribute('max', max);
           }
           if (this.step === 0) this.initTelInput();
+          if (this.step === 1) initPackagesSwiperAndBind();
+
+          // Event listener om Swiper vanaf init te binden
+          window.addEventListener('packages-swiper-ready', (e) => {
+            const s = e?.detail?.swiper;
+            if (!s) return;
+            this.bindSwiper(s);
+            this.updateSwiperEdges();
+            requestAnimationFrame(() => this.updateSwiperEdges());
+          }, { once: false });
         });
       },
 
@@ -590,7 +584,8 @@
           const beRe = /^\d{4}$/;
           let okPostcode = nlRe.test(pc);
           if (!okPostcode && beRe.test(pc)) {
-            const num = parseInt(pc, 10); okPostcode = num >= 1000 && num <= 9999;
+            const num = parseInt(pc, 10);
+            okPostcode = num >= 1000 && num <= 9999;
           }
           if (!okPostcode) { this.errors.postcode = 'Vul een geldige postcode in (NL: 1234 AB, BE: 1000–9999).'; firstInvalidEl = firstInvalidEl || document.getElementById('postcode'); }
           else { this.form.postcode = pc; }
@@ -611,12 +606,12 @@
         this.clearState();
       },
 
-      // tel init/destroy zodat het ook na "Vorige" werkt
+      // --- intl-tel-input ---
       initTelInput() {
         const input = document.getElementById('phone');
         if (!input) return;
 
-        // voorkom dubbele init (als wrapper er al is)
+        // voorkom dubbele init
         if (input.parentElement?.classList.contains('iti') && this._iti) return;
 
         this._iti = window.intlTelInput(input, {
@@ -641,7 +636,65 @@
           this._iti = null;
         }
       },
+
+      // --- Swiper binding & helpers ---
+      bindSwiper(swiper) {
+        this._swiper = swiper;
+        this.swiperReady = true;
+        this.updateSwiperEdges();
+
+        swiper.on('slideChange resize transitionEnd reachBeginning reachEnd fromEdge', () => {
+          this.updateSwiperEdges();
+        });
+
+        // veiligheidje
+        setTimeout(() => this.updateSwiperEdges(), 0);
+      },
+      updateSwiperEdges() {
+        if (!this._swiper) return;
+        this.swiperAtStart = this._swiper.isBeginning;
+        this.swiperAtEnd   = this._swiper.isEnd;
+      },
+      swiperNext() { if (this._swiper) this._swiper.slideNext(); },
+      swiperPrev() { if (this._swiper) this._swiper.slidePrev(); },
+      destroyPackagesSwiper() {
+        if (this._swiper) { this._swiper.destroy(true, true); this._swiper = null; }
+        this.swiperReady = false;
+        this.swiperAtStart = true;
+        this.swiperAtEnd = false;
+      },
     }
+  }
+
+  // Init Swiper wanneer stap 1 zichtbaar is en bind via event aan Alpine
+  function initPackagesSwiperAndBind() {
+    const el = document.querySelector('.packages-swiper');
+    if (!el || typeof Swiper === 'undefined') return null;
+
+    const swiper = new Swiper(el, {
+      slidesPerView: 1,
+      spaceBetween: 16,
+      grabCursor: false,
+      watchOverflow: true,
+      keyboard: { enabled: true },
+      a11y: { enabled: true },
+      observer: true,
+      observeParents: true,
+      observeSlideChildren: true,
+      breakpoints: {
+        768:  { slidesPerView: 2, spaceBetween: 20 },
+        1024: { slidesPerView: 2, spaceBetween: 24 },
+      },
+      on: {
+        init(s) {
+          window.dispatchEvent(new CustomEvent('packages-swiper-ready', { detail: { swiper: s } }));
+          requestAnimationFrame(() => { s.update(); });
+        }
+      }
+    });
+
+    if (!swiper.initialized && typeof swiper.init === 'function') swiper.init();
+    return swiper;
   }
 </script>
 @endsection
