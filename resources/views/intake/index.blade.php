@@ -177,10 +177,7 @@
                   x-show="swiperReady && (swiperAtStart || swiperAtEnd)"
                   x-transition
                   @click="swiperAtStart ? swiperNext() : swiperPrev()">
-            <!-- Right arrow when at start -->
             <i x-show="swiperAtStart" class="fa-solid fa-right-long fa-sm pl-2.25 opacity-25"></i>
-
-            <!-- Left arrow when at end -->
             <i x-show="swiperAtEnd" class="fa-solid fa-right-long fa-sm pr-2 opacity-25 fa-flip-horizontal"></i>
           </button>
         </div>
@@ -188,7 +185,6 @@
         <div class="relative mb-6">
           <div class="swiper packages-swiper px-6">
             <div class="swiper-wrapper">
-
 @php
   $packages = [
     [
@@ -365,12 +361,14 @@
 
         <div class="mt-auto flex flex-wrap gap-2">
           <button type="button" class="{{ $btnPrimary }}"
+                  :disabled="isPaying"
                   @click="choosePackage('{{ $pkg['key'] }}', 24)">
             24 weken traject kiezen
             <span class="px-2 py-1 text-xs ml-2 rounded bg-[#e5c791]">{{ $pkg['cta']['discount'] }}</span>
           </button>
 
           <button type="button" class="{{ $btnPrimary }}"
+                  :disabled="isPaying"
                   @click="choosePackage('{{ $pkg['key'] }}', 12)">
             12 weken traject kiezen
           </button>
@@ -425,6 +423,8 @@
     const STORAGE_KEY = 'intakeWizard_v1';
 
     return {
+      isPaying: false,
+
       // stappen
       steps: [0,1,2],
       step: 0,
@@ -474,53 +474,79 @@
       },
       clearState() { try { localStorage.removeItem(STORAGE_KEY); } catch(e) {} },
 
-      init() {
-        this.loadState();
+init() {
+  this.loadState();
 
-        // auto-save
-        this._saveDebounced = this.debounce(() => this.saveState(), 200);
-        this.$watch('form', () => this._saveDebounced());
-        this.$watch('step', (val, oldVal) => {
-          this._saveDebounced();
+  // --- URL hints (alleen toepassen als we net van checkout komen) ---
+  const params   = new URLSearchParams(window.location.search);
+  const urlStep  = parseInt(params.get('step'), 10);
+  const advance  = params.get('advance') === '1';
+  const canceled = params.get('canceled') === '1';
 
-          // intl-tel-input beheer i.v.m. x-if
-          if (oldVal === 0) this.destroyTelInput();
-          if (val === 0) this.$nextTick(() => this.initTelInput());
+  // Waren we onderweg naar checkout?
+  let cameFromCheckout = false;
+  try { cameFromCheckout = sessionStorage.getItem('intakePending') === '1'; } catch (e) {}
 
-          // Swiper init/destroy op stap 1
-          if (val === 1) {
-            this.$nextTick(() => {
-              initPackagesSwiperAndBind();
-            });
-          } else if (oldVal === 1) {
-            this.destroyPackagesSwiper();
-          }
-        });
+  // 'step' uit URL mag altijd (handig voor directe deeplinks), maar clamp hem wel
+  if (!Number.isNaN(urlStep)) {
+    this.step = Math.min(Math.max(urlStep, 0), this.totalSteps - 1);
+  }
 
-        // eerste render: min/max DOB + tel-init indien stap 0
-        this.$nextTick(() => {
-          const el = document.getElementById('dob');
-          if (el) {
-            const today = new Date();
-            const max = today.toISOString().split('T')[0];
-            const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate());
-            const min = minDate.toISOString().split('T')[0];
-            el.setAttribute('min', min);
-            el.setAttribute('max', max);
-          }
-          if (this.step === 0) this.initTelInput();
-          if (this.step === 1) initPackagesSwiperAndBind();
+  // Alleen verwerken als we echt uit checkout komen
+  if (cameFromCheckout && advance) {
+    // Succes → 1 stap verder
+    this.step = Math.min(this.step + 1, this.totalSteps - 1);
+  }
+  if (cameFromCheckout && canceled) {
+    // Geannuleerd → terug naar stap 1 (kies pakket)
+    this.step = 1;
+  }
 
-          // Event listener om Swiper vanaf init te binden
-          window.addEventListener('packages-swiper-ready', (e) => {
-            const s = e?.detail?.swiper;
-            if (!s) return;
-            this.bindSwiper(s);
-            this.updateSwiperEdges();
-            requestAnimationFrame(() => this.updateSwiperEdges());
-          }, { once: false });
-        });
-      },
+  // Flag altijd opruimen zodat refresh niets opnieuw triggert
+  try { sessionStorage.removeItem('intakePending'); } catch (e) {}
+
+  // Fallback: als step door wat dan ook buiten bereik is → 0
+  if (![0,1,2].includes(this.step)) this.step = 0;
+
+  // autosave + watchers
+  this._saveDebounced = this.debounce(() => this.saveState(), 200);
+  this.$watch('form', () => this._saveDebounced());
+  this.$watch('step', (val, oldVal) => {
+    this._saveDebounced();
+    if (oldVal === 0) this.destroyTelInput();
+    if (val === 0) this.$nextTick(() => this.initTelInput());
+    if (val === 1) { this.$nextTick(() => { initPackagesSwiperAndBind(); }); }
+    else if (oldVal === 1) { this.destroyPackagesSwiper(); }
+  });
+
+  // init op first paint
+  this.$nextTick(() => {
+    const el = document.getElementById('dob');
+    if (el) {
+      const today = new Date();
+      const max = today.toISOString().split('T')[0];
+      const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate());
+      const min = minDate.toISOString().split('T')[0];
+      el.setAttribute('min', min);
+      el.setAttribute('max', max);
+    }
+    if (this.step === 0) this.initTelInput();
+    if (this.step === 1) initPackagesSwiperAndBind();
+
+    window.addEventListener('packages-swiper-ready', (e) => {
+      const s = e?.detail?.swiper; if (!s) return;
+      this.bindSwiper(s);
+      this.updateSwiperEdges();
+      requestAnimationFrame(() => this.updateSwiperEdges());
+    });
+
+    // Optioneel: maak de URL schoon (verwijder advance/canceled/step uit adresbalk)
+    if (advance || canceled || !Number.isNaN(urlStep)) {
+      const cleanUrl = window.location.pathname;
+      history.replaceState(null, '', cleanUrl);
+    }
+  });
+},
 
       packageLabel(key) {
         if (key === 'pakket_a') return 'Basis Pakket';
@@ -529,13 +555,13 @@
         return '';
       },
 
-      // kiezen via card-buttons
+      // kiezen via card-buttons → direct naar betalen
       choosePackage(pkg, weeks) {
         this.form.package  = pkg;
         this.form.duration = weeks;
         delete this.errors.package;
         delete this.errors.duration;
-        this.next(); // direct door naar overzicht
+        this.submit();
       },
 
       next() {
@@ -544,74 +570,165 @@
       },
       prev() { if (this.step > 0) this.step--; },
 
-      validateStep(stepIndex) {
-        this.errors = {};
-        let firstInvalidEl = null;
+      // === BELANGRIJK: valideer op data, niet op DOM ===
+validateStep(stepIndex) {
+  this.errors = {};
+  let firstInvalidEl = null;
 
-        if (stepIndex === 0) {
-          if (!this.form.name?.trim()) { this.errors.name = 'Vul je volledige naam in.'; firstInvalidEl = firstInvalidEl || document.getElementById('name'); }
-          const email = this.form.email?.trim() || '';
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.errors.email = 'Vul een geldig e-mailadres in.'; firstInvalidEl = firstInvalidEl || document.getElementById('email'); }
+  if (stepIndex === 0) {
+    // NAAM
+    if (!this.form.name?.trim()) {
+      this.errors.name = 'Vul je volledige naam in.';
+      firstInvalidEl = firstInvalidEl || document.getElementById('name');
+    }
 
-          const phoneInput = document.getElementById('phone');
-          if (this._iti) {
-            const number = this._iti.getNumber();
-            const valid  = this._iti.isValidNumber();
-            if (!valid || !number) { this.errors.phone = 'Vul een geldig telefoonnummer in.'; firstInvalidEl = firstInvalidEl || phoneInput; }
-            else { this.form.phone = number; }
-          } else if (!phoneInput?.value.trim()) {
-            this.errors.phone = 'Vul je telefoonnummer in.'; firstInvalidEl = firstInvalidEl || phoneInput;
-          }
+    // EMAIL
+    const email = this.form.email?.trim() || '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.errors.email = 'Vul een geldig e-mailadres in.';
+      firstInvalidEl = firstInvalidEl || document.getElementById('email');
+    }
 
-          const dobEl = document.getElementById('dob');
-          const dob = this.form.dob;
-          if (!dob) { this.errors.dob = 'Kies je geboortedatum.'; firstInvalidEl = firstInvalidEl || dobEl; }
-          else {
-            const v = new Date(dob);
-            const min = dobEl.getAttribute('min'); const max = dobEl.getAttribute('max');
-            if (Number.isNaN(v.getTime()) || (min && dob < min) || (max && dob > max)) {
-              this.errors.dob = 'Geboortedatum is ongeldig.'; firstInvalidEl = firstInvalidEl || dobEl;
-            }
-          }
+    // TELEFOON: valideer op opgeslagen waarde (DOM kan ontbreken op stap 1)
+    const phoneVal = (this.form.phone || '').trim();
+    if (!phoneVal) {
+      this.errors.phone = 'Vul je telefoonnummer in.';
+      firstInvalidEl = firstInvalidEl || document.getElementById('phone');
+    }
 
-          if (!this.form.gender) { this.errors.gender = 'Kies je geslacht.'; firstInvalidEl = firstInvalidEl || document.querySelector('input[name="gender"]'); }
-          if (!this.form.street?.trim()) { this.errors.street = 'Vul je straatnaam in.'; firstInvalidEl = firstInvalidEl || document.getElementById('street'); }
-          if (!this.form.house_number?.trim()) { this.errors.house_number = 'Vul je huisnummer in.'; firstInvalidEl = firstInvalidEl || document.getElementById('house_number'); }
+    // GEBOORTEDATUM: bereken min/max zelf, niet via DOM
+    const dob = this.form.dob;
+    if (!dob) {
+      this.errors.dob = 'Kies je geboortedatum.';
+      firstInvalidEl = firstInvalidEl || document.getElementById('dob');
+    } else {
+      const v = new Date(dob);
+      const today = new Date();
+      const max = today.toISOString().split('T')[0];
+      const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate());
+      const min = minDate.toISOString().split('T')[0];
+      if (Number.isNaN(v.getTime()) || dob < min || dob > max) {
+        this.errors.dob = 'Geboortedatum is ongeldig.';
+        firstInvalidEl = firstInvalidEl || document.getElementById('dob');
+      }
+    }
 
-          const pcRaw = (this.form.postcode || '').trim().toUpperCase();
-          const pc = pcRaw.replace(/\s+/g, ' ');
-          const nlRe = /^\d{4}\s?[A-Z]{2}$/;
-          const beRe = /^\d{4}$/;
-          let okPostcode = nlRe.test(pc);
-          if (!okPostcode && beRe.test(pc)) {
-            const num = parseInt(pc, 10);
-            okPostcode = num >= 1000 && num <= 9999;
-          }
-          if (!okPostcode) { this.errors.postcode = 'Vul een geldige postcode in (NL: 1234 AB, BE: 1000–9999).'; firstInvalidEl = firstInvalidEl || document.getElementById('postcode'); }
-          else { this.form.postcode = pc; }
-        }
+    // GESLACHT
+    if (!this.form.gender) {
+      this.errors.gender = 'Kies je geslacht.';
+      // geen betrouwbaar focus-target buiten stap 0
+    }
 
-        if (stepIndex === 1) {
-          if (!this.form.package)  this.errors.package  = 'Kies een pakket via de knoppen.';
-          if (!this.form.duration) this.errors.duration = 'Kies ook de duur (12 of 24 weken).';
-        }
+    // ADRES
+    if (!this.form.street?.trim()) {
+      this.errors.street = 'Vul je straatnaam in.';
+      firstInvalidEl = firstInvalidEl || document.getElementById('street');
+    }
+    if (!this.form.house_number?.trim()) {
+      this.errors.house_number = 'Vul je huisnummer in.';
+      firstInvalidEl = firstInvalidEl || document.getElementById('house_number');
+    }
 
-        this.$nextTick(() => { if (firstInvalidEl) firstInvalidEl.focus(); });
-        return Object.keys(this.errors).length === 0;
-      },
+    // POSTCODE
+    const pcRaw = (this.form.postcode || '').trim().toUpperCase();
+    const pc = pcRaw.replace(/\s+/g, ' ');
+    const nlRe = /^\d{4}\s?[A-Z]{2}$/;
+    const beRe = /^\d{4}$/;
+    let okPostcode = nlRe.test(pc);
+    if (!okPostcode && beRe.test(pc)) {
+      const num = parseInt(pc, 10);
+      okPostcode = num >= 1000 && num <= 9999;
+    }
+    if (!okPostcode) {
+      this.errors.postcode = 'Vul een geldige postcode in (NL: 1234 AB, BE: 1000–9999).';
+      firstInvalidEl = firstInvalidEl || document.getElementById('postcode');
+    } else {
+      this.form.postcode = pc;
+    }
+  }
 
-      submit() {
-        if (!this.validateStep(0) || !this.validateStep(1)) return;
-        alert('Verzonden! (demo)');
-        this.clearState();
-      },
+  if (stepIndex === 1) {
+    if (!this.form.package)  this.errors.package  = 'Kies een pakket via de knoppen.';
+    if (!this.form.duration) this.errors.duration = 'Kies ook de duur (12 of 24 weken).';
+  }
+
+  this.$nextTick(() => { if (firstInvalidEl) firstInvalidEl.focus?.(); });
+  return Object.keys(this.errors).length === 0;
+}
+
+submit() {
+  if (this.isPaying) return;
+
+  // 1) Valideer stap 0. Bij fout: ga naar stap 0 en toon de velden + error.
+  const ok0 = this.validateStep(0);
+  if (!ok0) {
+    this.step = 0;
+    this.$nextTick(() => {
+      // scrol naar het begin van stap 0
+      const wrap = document.getElementById('stap-1');
+      if (wrap?.scrollIntoView) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // probeer de eerste invalid input te focussen (je validateStep zet 'firstInvalidEl' al op basis van IDs)
+      const first = document.querySelector(
+        '#name.border-red-500, #email.border-red-500, #phone.border-red-500, #dob.border-red-500, #street.border-red-500, #house_number.border-red-500, #postcode.border-red-500'
+      );
+      first?.focus?.();
+    });
+    return;
+  }
+
+  // 2) Valideer stap 1. Bij fout: terug naar stap 1.
+  const ok1 = this.validateStep(1);
+  if (!ok1) {
+    this.step = 1;
+    return;
+  }
+
+  // 3) Alles oké → betalen
+  this.isPaying = true;
+
+  const payload = {
+    name: this.form.name,
+    email: this.form.email,
+    phone: this.form.phone,
+    dob: this.form.dob,
+    gender: this.form.gender,
+    street: this.form.street,
+    house_number: this.form.house_number,
+    postcode: this.form.postcode,
+    package: this.form.package,
+    duration: this.form.duration
+  };
+
+  fetch('{{ route('intake.checkout') }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(async (res) => {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Kon betaalpagina niet starten.');
+    }
+    return res.json();
+  })
+.then(({ redirect_url }) => {
+  try { sessionStorage.setItem('intakePending', '1'); } catch (e) {}
+  window.location.href = redirect_url;
+})
+  .catch((e) => {
+    this.errors.general = e.message || 'Er ging iets mis bij het starten van de betaling.';
+  })
+  .finally(() => { this.isPaying = false; });
+}
 
       // --- intl-tel-input ---
       initTelInput() {
         const input = document.getElementById('phone');
         if (!input) return;
 
-        // voorkom dubbele init
         if (input.parentElement?.classList.contains('iti') && this._iti) return;
 
         this._iti = window.intlTelInput(input, {
@@ -647,7 +764,6 @@
           this.updateSwiperEdges();
         });
 
-        // veiligheidje
         setTimeout(() => this.updateSwiperEdges(), 0);
       },
       updateSwiperEdges() {
