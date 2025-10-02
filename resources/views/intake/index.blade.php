@@ -701,30 +701,40 @@
         const csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
 
         fetch('{{ route('intake.checkout') }}', {
-          method: 'POST',
-          headers: {
+        method: 'POST',
+        headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',            // <-- belangrijk
             ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {})
-          },
-          body: JSON.stringify(payload)
+        },
+        credentials: 'same-origin',                // <-- voor zekerheid bij cookies/sessies
+        body: JSON.stringify(payload)
         })
         .then(async (res) => {
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.message || 'Kon betaalpagina niet starten.');
-          }
-          return res.json();
+        // Log detail bij fout om de exacte status/body te zien
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            console.error('Checkout HTTP error', res.status, text);
+            let msg = 'Kon betaalpagina niet starten.';
+            try {
+            const err = JSON.parse(text);
+            if (err?.message) msg = err.message;
+            } catch(_) {}
+            throw new Error(msg);
+        }
+        return res.json();
         })
         .then(({ redirect_url }) => {
-          try { sessionStorage.setItem('intakePending', '1'); } catch (e) {}
-          window.location.href = redirect_url;
+        if (!redirect_url) throw new Error('Server gaf geen redirect_url terug.');
+        try { sessionStorage.setItem('intakePending', '1'); } catch (e) {}
+        window.location.href = redirect_url;
         })
         .catch((e) => {
-          console.error('Checkout error:', e);
-          this.errors.general = e.message || 'Er ging iets mis bij het starten van de betaling.';
+        console.error('Checkout error:', e);
+        this.errors.general = e.message || 'Er ging iets mis bij het starten van de betaling.';
         })
         .finally(() => { this.isPaying = false; });
-      }, // <-- KOMMA TOEGEVOEGD
+        },
 
       // --- intl-tel-input ---
       initTelInput() {

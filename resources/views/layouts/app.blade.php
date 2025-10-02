@@ -32,6 +32,7 @@
                 font-family: 'Inter', sans-serif;
             }
         </style>
+        <meta name="csrf-token" content="{{ csrf_token() }}">
     </head>
     <body class="bg-[#faf5f2] min-h-screen max-h-screen flex">
         <div class="w-fit h-screen bg-[#c8ab7a] p-4">

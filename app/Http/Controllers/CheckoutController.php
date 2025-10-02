@@ -66,7 +66,6 @@ class CheckoutController extends Controller
             'mode'        => 'subscription',
             'success_url' => $successUrl . '&session_id={CHECKOUT_SESSION_ID}',
             'cancel_url'  => $cancelUrl,
-            'customer_creation' => 'always',
             'customer_email'    => $data['email'],
             'locale' => 'nl',
             'phone_number_collection' => ['enabled' => true],
@@ -82,13 +81,7 @@ class CheckoutController extends Controller
                 'house_number' => $data['house_number'],
                 'postcode' => $data['postcode'],
             ],
-            'subscription_data' => [
-                'cancel_at' => $cancelAt, // auto-stop na 3/6 maanden
-                'metadata'  => [
-                    'package'  => $data['package'],
-                    'duration' => (string)$data['duration'],
-                ],
-            ],
+            
             'line_items' => [[
                 'price_data' => [
                     'currency'     => 'eur',
