@@ -15,6 +15,7 @@ class ClientProfile extends Model
         'birthdate',
         'gender',
         'address',
+        'phone_e164',
         'height_cm',
         'weight_kg',
         'goals',
@@ -34,6 +35,7 @@ class ClientProfile extends Model
     protected $casts = [
         'birthdate'      => 'date',
         'address'        => 'array',
+        'phone_e164'    => 'string',
         'height_cm'      => 'decimal:2',
         'weight_kg'      => 'decimal:2',
         'goals'          => 'array',
