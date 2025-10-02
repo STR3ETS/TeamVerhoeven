@@ -44,8 +44,8 @@ class CheckoutController extends Controller
         $unitAmountCents = (int) round($monthlyAmount * 100);
 
         // Waarheen terug na succes/cancel:
-        $successUrl = route('intake.index', ['step' => 2, 'advance' => 1]); // 1 stap verder
-        $cancelUrl  = route('intake.index', ['step' => 1, 'canceled' => 1]); // terug naar kiezen
+        $successUrl = route('intake.index', ['step' => 3]);                 // direct naar Lengte & Gewicht
+        $cancelUrl  = route('intake.index', ['step' => 2, 'canceled' => 1]); // terug naar “Kies pakket”
 
         // FAKE modus: Stripe overslaan
         if (config('app.payments_fake', env('PAYMENTS_FAKE', false))) {
