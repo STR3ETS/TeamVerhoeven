@@ -46,9 +46,9 @@
     <body class="bg-[#faf5f2] min-h-screen max-h-screen flex flex-col md:flex-row">
         <div id="mobile-menu" class="md:hidden w-full h-screen fixed z-[999] top-0 left-0 bg-[#c8ab7a] p-4">
             <ul class="w-full flex items-center justify-between mb-8">
-                <li>
+                <a href="{{ url('/') }}">
                     <img class="max-w-[5rem]" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
-                </li>
+                </a>
                 <li id="mobile-menu-close">
                     <i class="fa-solid fa-xmark text-white text-xl"></i>
                 </li>
@@ -63,7 +63,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url('/intake') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                        <a href="{{ url('/intake') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2 js-intake-link">
                             <i class="min-w-4 fa-solid fa-bolt fa-xs text-black"></i>
                             <span class="text-black font-semibold text-xs pt-0.5">Intakeformulier</span>
                         </a>
@@ -141,17 +141,17 @@
         </div>
         <div class="w-full md:w-fit md:h-screen bg-[#c8ab7a] p-4 md:min-w-[200px]">
             <ul class="flex md:hidden items-center justify-between">
-                <li>
+                <a href="{{ url('/') }}">
                     <img class="max-w-[5rem]" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
-                </li>
+                </a>
                 <li id="mobile-menu-open">
                     <i class="fa-solid fa-bars text-white text-xl"></i>
                 </li>
             </ul>
             <ul class="hidden md:block">
-                <li class="md:mb-6">
-                    <img class="max-w-[7rem]" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
-                </li>
+                <a href="{{ url('/') }}">
+                    <img class="max-w-[7rem] mb-6" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
+                </a>
                 <!-- NIET INGELOGT -->
                 @guest
                     <li>
@@ -161,7 +161,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url('/intake') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                        <a href="{{ url('/intake') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2 js-intake-link">
                             <i class="min-w-4 fa-solid fa-bolt fa-xs text-black"></i>
                             <span class="text-black font-semibold text-xs pt-0.5">Intakeformulier</span>
                         </a>
@@ -249,6 +249,17 @@
             });
             document.getElementById('mobile-menu-close').addEventListener('click', function() {
                 mobileMenu.classList.remove('active');
+            });
+
+            document.addEventListener('click', function(e) {
+                const a = e.target.closest('a.js-intake-link');
+                if (!a) return;
+                try {
+                localStorage.removeItem('intakeWizard_v1');
+                sessionStorage.removeItem('intakePending');
+                sessionStorage.removeItem('intakeConfirmed');
+                } catch (_) {}
+                // geen preventDefault → normale navigatie gaat door
             });
         </script>
     </body>
