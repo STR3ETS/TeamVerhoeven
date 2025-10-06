@@ -3,9 +3,9 @@
 
 @section('content')
 <div class="flex flex-col md:items-center">
-    <img class="fade-up max-w-[7rem] md:max-w-[10rem] mb-8" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
+    <img class="hidden md:block fade-up max-w-[7rem] md:max-w-[10rem] mb-8" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
     <div class="fade-up w-full h-[795px] md:h-auto md:aspect-[2/1] relative rounded-3xl overflow-hidden">
-        <video class="hidden md:block rounded-3xl w-full h-full absolute z-1 object-cover" autoplay loop muted playsinline src="/assets/videos/welkom-horizontaal.mp4"></video>
+        <video class="block rounded-3xl w-full h-full absolute z-1 object-cover" autoplay loop muted playsinline src="/assets/videos/welkom-horizontaal.mp4"></video>
         <div class="w-full h-full p-8 absolute z-2 bg-black/25 flex flex-col gap-6">
             <h1 class="text-6xl text-white font-black">BETTER.<br>FASTER.<br>STRONGER.</h1>
             <a href="#"
