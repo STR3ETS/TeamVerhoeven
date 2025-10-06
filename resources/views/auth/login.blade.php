@@ -26,6 +26,11 @@
     Log in in jouw persoonlijke trainingsplatform.
   </p>
 
+  @php
+    // Verify-mode actief zodra er een code is aangevraagd
+    $verifying = session('login_step') === 'verify' || session('status') || old('email');
+  @endphp
+
   <div class="{{ $cardClass }}">
     {{-- Status / errors --}}
     @if (session('status'))
@@ -44,40 +49,45 @@
       </div>
     @endif
 
-    {{-- Formulier 1: code aanvragen --}}
+    {{-- Formulier 1: e-mailadres (in verify-mode: alleen lezen, zonder knoppen) --}}
     <form method="POST" action="{{ route('login.request') }}" class="space-y-4">
       @csrf
       <div>
         <label for="email" class="text-sm font-medium text-black mb-1 block">Wat is je e-mailadres?</label>
-        <input id="email" type="email" name="email" value="{{ old('email') }}" required
-               autocomplete="email"
-               class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm border-gray-300 hover:border-[#c7c7c7]">
+        <input id="email" type="email" name="email"
+              value="{{ old('email') }}"
+              {{ $verifying ? 'readonly' : 'required' }}
+              autocomplete="email"
+              class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm border-gray-300 hover:border-[#c7c7c7]
+                      {{ $verifying ? 'bg-gray-100 text-black/30 cursor-not-allowed pointer-events-none' : '' }}">
       </div>
-      <div class="flex items-center justify-between gap-2">
-        <a href="{{ url('/') }}" class="{{ $btnGhost }}">Terug naar home</a>
-        <button type="submit" class="{{ $btnPrimary }}">Verstuur code naar mijn e-mailadres</button>
-      </div>
+
+      @unless($verifying)
+        <div class="flex items-center justify-between gap-2">
+          <a href="{{ url('/') }}" class="{{ $btnGhost }}">Terug naar home</a>
+          <button type="submit" class="{{ $btnPrimary }}">Verstuur code naar mijn e-mailadres</button>
+        </div>
+      @endunless
     </form>
 
-    <hr class="my-6 border-gray-200">
+    {{-- Formulier 2: inloggen met code — alleen in verify-mode --}}
+    @if ($verifying)
+      <form method="POST" action="{{ route('login.verify') }}" class="space-y-4 mt-4">
+        @csrf
+        <input type="hidden" name="email" value="{{ old('email') }}">
 
-    {{-- Formulier 2: inloggen met code --}}
-    <form method="POST" action="{{ route('login.verify') }}" class="space-y-4">
-      @csrf
-      {{-- Neem e-mail mee uit stap 1 --}}
-      <input type="hidden" name="email" value="{{ old('email') }}">
+        <div>
+          <label for="inlogencode" class="text-sm font-medium text-black mb-1 block">Voer inlogcode in</label>
+          <input id="inlogencode" name="code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required
+                autofocus
+                class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm border-gray-300 hover:border-[#c7c7c7]">
+        </div>
 
-      <div>
-        <label for="inlogencode" class="text-sm font-medium text-black mb-1 block">Voer inlogcode in</label>
-        <input id="inlogencode" name="code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required
-               class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm border-gray-300 hover:border-[#c7c7c7]">
-        <p class="text-xs text-black/50 mt-1">Dev-tip: code staat in <em>storage/logs/laravel.log</em>.</p>
-      </div>
-
-      <div class="flex items-center justify-end">
-        <button type="submit" class="{{ $btnPrimary }}">Inloggen</button>
-      </div>
-    </form>
+        <div class="flex items-center justify-end">
+          <button type="submit" class="{{ $btnPrimary }}">Inloggen</button>
+        </div>
+      </form>
+    @endif
   </div>
 </div>
 @endsection

@@ -42,68 +42,82 @@
                     <img class="max-w-[7rem]" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
                 </li>
                 <!-- NIET INGELOGT -->
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Inloggen</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-bolt fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Intakeformulier</span>
-                    </a>
-                </li>
+                @guest
+                    <li>
+                        <a href="{{ url('/login') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
+                            <span class="text-black font-semibold text-xs pt-0.5">Inloggen</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url('/intake') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <i class="min-w-4 fa-solid fa-bolt fa-xs text-black"></i>
+                            <span class="text-black font-semibold text-xs pt-0.5">Intakeformulier</span>
+                        </a>
+                    </li>
+                @endguest
                 <!-- INGELOGT ALS COACH/KLANT -->
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Overzicht</span>
-                    </a>
-                </li>
-                <!-- INGELOGT ALS COACH -->
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-ban fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Ongeclaimde klanten</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Chat met je klant</span>
-                    </a>
-                </li>
-                <!-- INGELOGT ALS KLANT -->
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-clipboard-user fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Weekplanning</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Chat met je coach</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-shopping-bag fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Supplementen</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ route('logout') }}"
-                        onclick="event.preventDefault(); this.nextElementSibling.submit();"
-                        class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                        <i class="min-w-4 fa-solid fa-right-from-bracket fa-xs text-black"></i>
-                        <span class="text-black font-semibold text-xs pt-0.5">Uitloggen</span>
-                    </a>
-                    <form method="POST" action="{{ route('logout') }}" class="hidden">
-                        @csrf
-                    </form>
-                </li>
+                @auth
+                    <!-- INGELOGT ALS COACH -->
+                    @if(auth()->user()->role === 'coach')
+                        <li>
+                            <a href="{{ url('/coach') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Overzicht</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-ban fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Ongeclaimde klanten</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Chat met je klant</span>
+                            </a>
+                        </li>
+                    @endif
+                    <!-- INGELOGT ALS KLANT -->
+                    @if(auth()->user()->role === 'client')
+                        <li>
+                            <a href="{{ url('/client') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Overzicht</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-clipboard-user fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Weekplanning</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Chat met je coach</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-shopping-bag fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Supplementen</span>
+                            </a>
+                        </li>
+                    @endif
+                    <li>
+                        <a href="{{ route('logout') }}"
+                            onclick="event.preventDefault(); this.nextElementSibling.submit();"
+                            class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <i class="min-w-4 fa-solid fa-right-from-bracket fa-xs text-black"></i>
+                            <span class="text-black font-semibold text-xs pt-0.5">Uitloggen</span>
+                        </a>
+                        <form method="POST" action="{{ route('logout') }}" class="hidden">
+                            @csrf
+                        </form>
+                    </li>
+                @endauth
             </ul>
         </div>
         <div class="flex-1 min-h-screen max-h-screen overflow-y-auto">
