@@ -73,7 +73,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <a href="{{ route('coach.threads.index') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
                                 <span class="text-black font-semibold text-xs pt-0.5">Chat met je klant</span>
                             </a>
@@ -94,7 +94,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <a href="{{route('client.threads.index')}}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
                                 <span class="text-black font-semibold text-xs pt-0.5">Chat met je coach</span>
                             </a>
