@@ -10,10 +10,14 @@
     // Zorg dat relaties geladen zijn (mocht controller het vergeten)
     $thread->loadMissing(['clientUser', 'coachUser', 'messages.sender']);
 
-    $coachUser   = $thread->coachUser;               // \App\Models\User | null
-    $clientUser  = $thread->clientUser;              // \App\Models\User | null
+    $coachUser  = $thread->coachUser;   // \App\Models\User | null
+    $clientUser = $thread->clientUser;  // \App\Models\User | null
+
+    // Avatar-fallback: eigen url -> ui-avatars -> placeholder
     $coachAvatar = $coachUser?->coachProfile?->avatar_url
-                   ?: 'https://placehold.co/80x80?text=C'; // simpele fallback
+        ?: ($coachUser?->name
+            ? 'https://ui-avatars.com/api/?name='.urlencode($coachUser->name).'&size=80'
+            : 'https://placehold.co/80x80?text=C');
 @endphp
 
 <div class="flex flex-col md:flex-row gap-4">
@@ -64,7 +68,7 @@
                         <div class="flex {{ $isCoach ? 'justify-end' : 'justify-start' }}">
                             <div class="rounded-2xl p-[1.5rem] min-w-[80%] max-w-[80%] {{ $isCoach ? 'bg-[#c8ab7a]/20 text-gray-900' : 'bg-gray-100 text-gray-900' }}">
                                 <div class="text-sm mb-3">
-                                    {{ $m->body }}
+                                    {!! nl2br(e($m->body)) !!}
                                 </div>
                                 <div class="text-xs font-semibold {{ $isCoach ? 'text-gray-800' : 'text-gray-500' }}">
                                     {{ $m->created_at->format('d-m-Y H:i') }}<br>

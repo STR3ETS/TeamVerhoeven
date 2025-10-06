@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ClientThreadController;
+use App\Http\Controllers\CoachPlanController;
 use App\Http\Controllers\CoachThreadController;
 use App\Http\Controllers\MagicLoginController;
 use Illuminate\Http\Request;
@@ -20,9 +21,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::prefix('coach')->name('coach.')->middleware('role:coach')->group(function () {
         Route::get('/', fn () => view('coach.index'))->name('index');
-        Route::get('/coach/threads',                 [CoachThreadController::class, 'index'])->name('threads.index');
-        Route::get('/coach/threads/{thread}',        [CoachThreadController::class, 'show'])->name('threads.show');
-        Route::post('/coach/threads/{thread}/msg',   [CoachThreadController::class, 'storeMessage'])->name('threads.messages.store');
+        Route::get('/threads',                 [CoachThreadController::class, 'index'])->name('threads.index');
+        Route::get('/threads/{thread}',        [CoachThreadController::class, 'show'])->name('threads.show');
+        Route::post('/threads/{thread}/msg',   [CoachThreadController::class, 'storeMessage'])->name('threads.messages.store');
+        Route::get('/plans',                   [CoachPlanController::class, 'index'])->name('plans.index');
     });
     Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
         Route::get('/', fn () => view('client.index'))->name('index');
