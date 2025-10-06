@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Configuration\Exceptions;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,5 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Eventueel kun je hier ook group-aanpassingen doen:
         // $middleware->appendToGroup('web', [ ... ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->reportable(function (Throwable $e) {
+            //
+        });
     })
     ->create();
