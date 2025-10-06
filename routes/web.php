@@ -7,12 +7,6 @@ use App\Http\Controllers\MagicLoginController;
 use Illuminate\Http\Request;
 use App\Models\AccessKey;
 
-
-
-
-
-
-
 Route::get('/', function () { return view('welcome'); });
 
 Route::middleware('guest')->group(function () {
@@ -23,17 +17,14 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:10,1')->name('login.verify');
 });
 Route::middleware(['auth'])->group(function () {
-    Route::get('/coach', fn() => view('coach.index'))->name('coach.index')->middleware('role:coach');
-    Route::get('/client', fn() => view('client.index'))->name('client.index')->middleware('role:client');
+    Route::prefix('coach')->name('coach.')->middleware('role:coach')->group(function () {
+        Route::get('/', fn () => view('coach.index'))->name('index');
+    });
+    Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
+        Route::get('/', fn () => view('client.index'))->name('index');
+    });
     Route::post('/logout', [MagicLoginController::class, 'logout'])->name('logout');
 });
-
-
-
-
-
-
-
 
 Route::get('/intake', function (Request $request) {
     if ($request->has('key')) {
