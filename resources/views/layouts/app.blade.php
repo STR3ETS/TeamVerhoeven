@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
@@ -91,6 +92,17 @@
                         <i class="min-w-4 fa-solid fa-shopping-bag fa-xs text-black"></i>
                         <span class="text-black font-semibold text-xs pt-0.5">Supplementen</span>
                     </a>
+                </li>
+                <li>
+                    <a href="{{ route('logout') }}"
+                        onclick="event.preventDefault(); this.nextElementSibling.submit();"
+                        class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                        <i class="min-w-4 fa-solid fa-right-from-bracket fa-xs text-black"></i>
+                        <span class="text-black font-semibold text-xs pt-0.5">Uitloggen</span>
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}" class="hidden">
+                        @csrf
+                    </form>
                 </li>
             </ul>
         </div>

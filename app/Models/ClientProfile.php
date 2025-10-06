@@ -29,7 +29,11 @@ class ClientProfile extends Model
         'heartrate',
         'test_12min',
         'test_5k',
+        'test_10k',
+        'test_marathon',
         'coach_preference',
+        'goal',
+        'ftp',
     ];
 
     protected $casts = [
@@ -45,6 +49,10 @@ class ClientProfile extends Model
         'heartrate'      => 'array',
         'test_12min'     => 'array',
         'test_5k'        => 'array',
+        'test_10k'      => 'array',
+        'test_marathon' => 'array',
+        'goal'       => 'array',
+        'ftp'        => 'array',
     ];
 
     public function user()

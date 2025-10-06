@@ -15,11 +15,13 @@ class User extends Authenticatable
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password', 'remember_token', 'temp_code'
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'temp_code_expires_at' => 'datetime',
     ];
 
     // Profielen per rol

@@ -14,5 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CoachesSeeder::class,
         ]);
+
+        $this->call(AccessKeySeeder::class);
     }
 }

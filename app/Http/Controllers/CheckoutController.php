@@ -10,13 +10,26 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use Stripe\StripeClient;
 
 class CheckoutController extends Controller
 {
+    /**
+     * Start checkout:
+     * - Valideert intake basisvelden (stap 0–2)
+     * - Maakt een DRAFT intake (client_id = null) + pending order
+     * - Slaat intake-id in de sessie (voor /intake/progress tijdens wizard)
+     * - Start Stripe Checkout en geeft redirect_url terug
+     */
     public function create(Request $request)
     {
-        // 1) Valideer verplichte velden (stap 0 + 1 + 2)
+        Log::info('[checkout.create] start', [
+            'ip'            => $request->ip(),
+            'payments_fake' => (bool) config('app.payments_fake', env('PAYMENTS_FAKE', false)),
+        ]);
+
+        // 1) Validatie (stap 0 + 1 + 2)
         $data = $request->validate([
             // stap 0
             'name'         => 'required|string|max:120',
@@ -27,15 +40,12 @@ class CheckoutController extends Controller
             'street'       => 'required|string|max:120',
             'house_number' => 'required|string|max:20',
             'postcode'     => 'required|string|max:20',
-
             // stap 1
             'preferred_coach' => 'required|in:roy,eline,nicky,none',
-
             // stap 2
             'package'      => 'required|in:pakket_a,pakket_b,pakket_c',
             'duration'     => 'required|in:12,24',
-
-            // overige stappen (optioneel maar we accepteren ze als ze komen)
+            // overige (optioneel)
             'height_cm'          => 'nullable|numeric|min:120|max:250',
             'weight_kg'          => 'nullable|numeric|min:35|max:250',
             'injuries'           => 'nullable|string|max:500',
@@ -47,12 +57,12 @@ class CheckoutController extends Controller
             'materials'          => 'nullable|string|max:500',
             'working_hours'      => 'nullable|string|max:500',
             'goal_distance'      => 'nullable|string|max:30',
-            'goal_time_hms'      => 'nullable|regex:/^\d{1,2}:\d{2}:\d{2}$/',
+            'goal_time_hms'      => 'nullable|regex:/^\d{1,2}:\d{2}:\d{2}$/', // HH:MM:SS
             'goal_ref_date'      => 'nullable|date',
             'cooper_meters'      => 'nullable|integer|min:800|max:5000',
-            'test_5k_pace'       => 'nullable|regex:/^\d{1,2}:\d{2}$/',
-            'test_10k_pace'      => 'nullable|regex:/^\d{1,2}:\d{2}$/',
-            'marathon_pace'      => 'nullable|regex:/^\d{1,2}:\d{2}$/',
+            'test_5k_pace'       => 'nullable|regex:/^\d{1,2}:\d{2}$/',        // MM:SS
+            'test_10k_pace'      => 'nullable|regex:/^\d{1,2}:\d{2}$/',        // MM:SS
+            'marathon_pace'      => 'nullable|regex:/^\d{1,2}:\d{2}:\d{2}$/',  // HH:MM:SS
             'hr_max_bpm'         => 'nullable|integer|min:120|max:220',
             'rest_hr_bpm'        => 'nullable|integer|min:30|max:100',
             'hr_estimate_from_age' => 'nullable|boolean',
@@ -61,199 +71,258 @@ class CheckoutController extends Controller
             'ftp_wkg'            => 'nullable|numeric|min:1|max:7.5',
         ]);
 
-        // Bepaal tarieven op basis van pakket en duur (per 4 weken factureren = maandelijks bedrag)
+        // [AK] Als er een geldige access key in de sessie staat, forceer pakket + duur
+        $ak = session('ak'); // ['id'=>..., 'package'=>..., 'duration'=>...]
+        if ($ak && isset($ak['package'], $ak['duration'])) {
+            $data['package']  = $ak['package'];
+            $data['duration'] = (string) $ak['duration']; // validatie verwacht '12' of '24'
+            Log::info('[checkout.create] access key forces selection', [
+                'package'  => $data['package'],
+                'duration' => (int) $data['duration'],
+                'ak_id'    => $ak['id'] ?? null,
+            ]);
+        }
+
+        Log::info('[checkout.create] validated', [
+            'email'    => $data['email'],
+            'package'  => $data['package'],
+            'duration' => (int) $data['duration'],
+        ]);
+
+        // 2) Tarieven
         $per4w = match ($data['package']) {
-            'pakket_a' => 50,   // Basis
-            'pakket_b' => 75,   // Chasing Goals
-            'pakket_c' => 120,  // Elite Hyrox
+            'pakket_a' => 50,
+            'pakket_b' => 75,
+            'pakket_c' => 120,
         };
         if ((int)$data['duration'] === 24) {
             if ($data['package'] === 'pakket_a') $per4w -= 5;   // 45
             if ($data['package'] === 'pakket_b') $per4w -= 5;   // 70
             if ($data['package'] === 'pakket_c') $per4w -= 10;  // 110
         }
-        $months          = ((int)$data['duration'] === 12) ? 3 : 6; // looptijd
         $monthlyAmount   = $per4w;
         $unitAmountCents = (int) round($monthlyAmount * 100);
 
-        // 2) DB: user + profiel + intake + order
-        [$user, $intake, $order] = DB::transaction(function () use ($data, $unitAmountCents, $months, $monthlyAmount) {
-            // 2.1) User vinden of maken (role=client). Als nieuw: random wachtwoord (kan later via "wachtwoord instellen" worden vervangen)
-            /** @var \App\Models\User $user */
-            $user = User::firstOrCreate(
-                ['email' => $data['email']],
-                [
-                    'name'              => $data['name'],
-                    'role'              => 'client',
-                    'password'          => Hash::make(Str::random(40)),
-                    'email_verified_at' => null,
-                ]
-            );
-            // name eventueel updaten
-            if ($user->name !== $data['name']) {
-                $user->name = $data['name'];
-                $user->save();
-            }
+        // 3) Payload voor Intake
+        $payload = [
+            'package'        => $data['package'],
+            'duration_weeks' => (int) $data['duration'],
+            'contact'        => [
+                'name'             => $data['name'],
+                'email'            => $data['email'],
+                'phone'            => $data['phone'] ?? null,
+                'dob'              => $data['dob'],
+                'gender'           => $data['gender'],
+                'street'           => $data['street'],
+                'house_number'     => $data['house_number'],
+                'postcode'         => strtoupper(trim($data['postcode'])),
+                'preferred_coach'  => $data['preferred_coach'],
+            ],
+            'goal'     => [
+                'distance' => $data['goal_distance'] ?? null,
+                'time_hms' => $data['goal_time_hms'] ?? null,
+                'date'     => $data['goal_ref_date'] ?? null,
+            ],
+            'run_paces'=> [
+                'p5k'      => $data['test_5k_pace'] ?? null,
+                'p10k'     => $data['test_10k_pace'] ?? null,
+                'marathon' => $data['marathon_pace'] ?? null,
+            ],
+            'ftp'      => [
+                'mode' => $data['ftp_mode'] ?? 'w',
+                'watt' => $data['ftp_watt'] ?? null,
+                'wkg'  => $data['ftp_wkg'] ?? null,
+            ],
+            'profile'  => [
+                'height_cm'         => $data['height_cm'] ?? null,
+                'weight_kg'         => $data['weight_kg'] ?? null,
+                'injuries'          => $data['injuries'] ?? null,
+                'goals'             => $data['goals'] ?? null,
+                'max_days_per_week' => $data['max_days_per_week'] ?? null,
+                'session_minutes'   => $data['session_minutes'] ?? null,
+                'sport_background'  => $data['sport_background'] ?? null,
+                'facilities'        => $data['facilities'] ?? null,
+                'materials'         => $data['materials'] ?? null,
+                'working_hours'     => $data['working_hours'] ?? null,
+                'cooper_meters'     => $data['cooper_meters'] ?? null,
+                'hr_max_bpm'        => $data['hr_max_bpm'] ?? null,
+                'rest_hr_bpm'       => $data['rest_hr_bpm'] ?? null,
+                'test_5k_pace'      => $data['test_5k_pace'] ?? null,
+                'test_10k_pace'     => $data['test_10k_pace'] ?? null,
+                'marathon_pace'     => $data['marathon_pace'] ?? null,
+                'goal_distance'     => $data['goal_distance'] ?? null,
+                'goal_time_hms'     => $data['goal_time_hms'] ?? null,
+                'goal_ref_date'     => $data['goal_ref_date'] ?? null,
+                'ftp_mode'          => $data['ftp_mode'] ?? 'w',
+                'ftp_watt'          => $data['ftp_watt'] ?? null,
+                'ftp_wkg'           => $data['ftp_wkg'] ?? null,
+            ],
+        ];
 
-            // 2.2) Coach-id bepalen op basis van voorkeur
-            $coachId = $this->findCoachIdByPreference($data['preferred_coach']); // int|null
-
-            // 2.3) ClientProfile vullen of bijwerken (alleen blijvende profielvelden)
-            /** @var \App\Models\ClientProfile $profile */
-            $profile = ClientProfile::firstOrNew(['user_id' => $user->id]);
-
-            $profile->coach_id         = $coachId;
-            $profile->birthdate        = $data['dob'];
-            $profile->gender           = $this->normalizeGender($data['gender']); // m|f
-
-            // Adres + telefoon bewaren in address-json
-            $address = is_array($profile->address) ? $profile->address : [];
-            $profile->address = array_merge($address, [
-                'street'       => $data['street'],
-                'house_number' => $data['house_number'],
-                'postcode'     => strtoupper(trim($data['postcode'])),
-                'phone'        => $data['phone'] ?? null,
-                // 'country'    => 'NL',  // zet dit erbij als je wil
+        // 4) Draft Intake + pending Order
+        [$intake, $order] = DB::transaction(function () use ($payload, $data, $unitAmountCents) {
+            $intake = Intake::create([
+                'client_id' => null,
+                'status'    => 'active',
+                'payload'   => $payload,
             ]);
 
-            // Metingen
-            if (isset($data['height_cm'])) $profile->height_cm = $data['height_cm'];
-            if (isset($data['weight_kg'])) $profile->weight_kg = $data['weight_kg'];
+            $order = Order::create([
+                'client_id'    => null,
+                'intake_id'    => $intake->id,
+                'period_weeks' => (int) $data['duration'],
+                'amount_cents' => $unitAmountCents,
+                'currency'     => 'EUR',
+                'provider'     => 'stripe',
+                'status'       => 'pending',
+                'paid_at'      => null,
+            ]);
 
-            // Intake-velden die blijvend nuttig zijn
-            $profile->period_weeks = (int) $data['duration'];
-
-            // frequentie JSON
-            $freq = is_array($profile->frequency) ? $profile->frequency : [];
-            $profile->frequency = array_filter([
-                'sessions_per_week'   => $data['max_days_per_week'] ?? null,
-                'minutes_per_session' => $data['session_minutes'] ?? null,
-            ], fn($v) => !is_null($v));
-
-            // tekstvelden
-            if (array_key_exists('sport_background', $data)) $profile->background = $data['sport_background'] ?: null;
-            if (array_key_exists('facilities', $data))       $profile->facilities = $data['facilities'] ?: null;
-            if (array_key_exists('materials', $data))        $profile->materials  = $data['materials'] ?: null;
-            if (array_key_exists('working_hours', $data))    $profile->work_hours = $data['working_hours'] ?: null;
-
-            // heartrate JSON
-            $hr = is_array($profile->heartrate) ? $profile->heartrate : [];
-            $profile->heartrate = array_filter([
-                'resting' => $data['rest_hr_bpm'] ?? null,
-                'max'     => $data['hr_max_bpm'] ?? null,
-            ], fn($v) => !is_null($v));
-
-            // Cooper-test
-            if (isset($data['cooper_meters'])) {
-                $profile->test_12min = ['meters' => (int) $data['cooper_meters']];
-            }
-
-            // Alleen 5k pace als minutes/seconds object (de kolom heet test_5k en is JSON, dus dit is prima)
-            if (!empty($data['test_5k_pace'])) {
-                [$m, $s] = $this->parsePaceToMinSec($data['test_5k_pace']);
-                $profile->test_5k = ['minutes' => $m, 'seconds' => $s];
-            }
-
-            // Doelen en blessures als array in JSON
-            if (array_key_exists('goals', $data)) {
-                $profile->goals = $this->explodeToArray($data['goals']);
-            }
-            if (array_key_exists('injuries', $data)) {
-                $profile->injuries = $this->explodeToArray($data['injuries']);
-            }
-
-            // coach preference als enum op profiel
-            $profile->coach_preference = $data['preferred_coach']; // eline|nicky|roy|none
-
-            $profile->save();
-
-            // 2.4) Intake opslaan of bijwerken (bewaar volledige wizard-payload hier)
-            $payload = [
-                'package'           => $data['package'],
-                'duration_weeks'    => (int) $data['duration'],
-                'goal'              => [
-                    'distance' => $data['goal_distance'] ?? null,
-                    'time_hms' => $data['goal_time_hms'] ?? null,
-                    'date'     => $data['goal_ref_date'] ?? null,
-                ],
-                'run_paces'         => [
-                    'p5k'      => $data['test_5k_pace'] ?? null,
-                    'p10k'     => $data['test_10k_pace'] ?? null,
-                    'marathon' => $data['marathon_pace'] ?? null,
-                ],
-                'ftp'               => [
-                    'mode' => $data['ftp_mode'] ?? null,
-                    'watt' => $data['ftp_watt'] ?? null,
-                    'wkg'  => $data['ftp_wkg'] ?? null,
-                ],
-                // Bewaar ook de ruwe contactbasis voor referentie
-                'contact'           => [
-                    'name'         => $data['name'],
-                    'email'        => $data['email'],
-                    'phone'        => $data['phone'] ?? null,
-                    'dob'          => $data['dob'],
-                    'gender'       => $data['gender'],
-                    'street'       => $data['street'],
-                    'house_number' => $data['house_number'],
-                    'postcode'     => $data['postcode'],
-                    'preferred_coach' => $data['preferred_coach'],
-                ],
-            ];
-
-            // Huidige open intake voor deze client pakken, anders nieuwe
-            $intake = Intake::where('client_id', $user->id)
-                ->whereIn('status', ['draft', 'active'])
-                ->latest('id')
-                ->first();
-
-            if (!$intake) {
-                $intake = new Intake();
-                $intake->client_id = $user->id;
-                $intake->status    = 'active';
-                $intake->payload   = $payload;
-                $intake->save();
-            } else {
-                $intake->status  = $intake->status ?? 'active';
-                $intake->payload = array_replace_recursive($intake->payload ?? [], $payload);
-                $intake->save();
-            }
-
-            // 2.5) Order klaarzetten (pending). We bewaren het maandbedrag.
-            $order = new Order();
-            $order->client_id     = $user->id;
-            $order->intake_id     = $intake->id;
-            $order->period_weeks  = (int) $data['duration'];
-            $order->amount_cents  = $unitAmountCents; // maandbedrag in centen
-            $order->currency      = 'EUR';
-            $order->provider      = 'stripe';
-            $order->status        = 'pending';
-            $order->paid_at       = null;
-            $order->save();
-
-            return [$user, $intake, $order];
+            return [$intake, $order];
         });
 
-        // 3) Stripe Checkout sessie aanmaken
-        $successUrl = route('intake.index', ['step' => 3, 'advance' => 1]); // door naar Lengte & Gewicht
-        $cancelUrl  = route('intake.index', ['step' => 2, 'canceled' => 1]);
+        Log::info('[checkout.create] draft created', [
+            'intake_id'    => $intake->id,
+            'order_id'     => $order->id,
+            'amount_cents' => $unitAmountCents,
+        ]);
 
-        // Testmodus: payments overslaan
-        if (config('app.payments_fake', env('PAYMENTS_FAKE', false))) {
-            return response()->json(['redirect_url' => $successUrl], 200);
+        // in sessie (ook in FAKE)
+        session(['draft_intake_id' => $intake->id]);
+
+        // 5) FAKE flow forceren als er een access key is, of globale FAKE aan staat
+        $forceFake = (bool) ($ak && isset($ak['id']));
+        if ($forceFake || config('app.payments_fake', env('PAYMENTS_FAKE', false))) {
+
+            Log::info('[checkout.create] FAKE enabled (access key or global)');
+
+            DB::transaction(function () use ($intake, $order, $data, $ak, $forceFake) {
+                // User
+                $user = User::firstOrCreate(
+                    ['email' => $data['email']],
+                    [
+                        'name'     => $data['name'] ?? 'Nieuwe klant',
+                        'role'     => 'client',
+                        'password' => Hash::make(Str::random(40)),
+                    ]
+                );
+
+                // Intake koppelen
+                if (!$intake->client_id) {
+                    $intake->client_id = $user->id;
+                    $intake->save();
+                }
+
+                // Order -> paid
+                $order->client_id    = $user->id;
+                $order->status       = 'paid';
+                $order->paid_at      = now();
+                $order->provider_ref = $forceFake ? ('access_key_'.$ak['id']) : ('fake_'.$order->id);
+                $order->save();
+
+                // ClientProfile vullen (zelfde als bestaande FAKE branch)
+                $contact = $intake->payload['contact'] ?? [];
+                $p       = $intake->payload['profile'] ?? [];
+                $goal    = $intake->payload['goal'] ?? [];
+
+                $profile = ClientProfile::firstOrNew(['user_id' => $user->id]);
+                $profile->birthdate        = $contact['dob'] ?? $profile->birthdate;
+                $profile->gender           = $this->normalizeGender($contact['gender'] ?? null) ?? $profile->gender;
+                $profile->coach_preference = $contact['preferred_coach'] ?? $profile->coach_preference ?? 'none';
+                $profile->period_weeks     = (int)($intake->payload['duration_weeks'] ?? $profile->period_weeks ?? 12);
+
+                $existingAddress = is_array($profile->address) ? $profile->address : [];
+                $profile->address = array_merge($existingAddress, array_filter([
+                    'street'       => $contact['street'] ?? null,
+                    'house_number' => $contact['house_number'] ?? null,
+                    'postcode'     => $contact['postcode'] ?? null,
+                ], fn ($v) => !is_null($v)));
+
+                if (!empty($contact['phone'])) {
+                    $profile->phone_e164 = $contact['phone'];
+                }
+
+                $profile->height_cm = $p['height_cm'] ?? $profile->height_cm;
+                $profile->weight_kg = $p['weight_kg'] ?? $profile->weight_kg;
+
+                $existingFrequency = is_array($profile->frequency) ? $profile->frequency : [];
+                $profile->frequency = array_merge($existingFrequency, array_filter([
+                    'sessions_per_week'   => $p['max_days_per_week'] ?? null,
+                    'minutes_per_session' => $p['session_minutes'] ?? null,
+                ], fn ($v) => !is_null($v)));
+
+                $profile->background = $p['sport_background'] ?? $profile->background;
+                $profile->facilities = $p['facilities'] ?? $profile->facilities;
+                $profile->materials  = $p['materials'] ?? $profile->materials;
+                $profile->work_hours = $p['working_hours'] ?? $profile->work_hours;
+
+                $existingHR = is_array($profile->heartrate) ? $profile->heartrate : [];
+                $profile->heartrate = array_merge($existingHR, array_filter([
+                    'resting' => $p['rest_hr_bpm'] ?? null,
+                    'max'     => $p['hr_max_bpm'] ?? null,
+                ], fn ($v) => !is_null($v)));
+
+                if (!empty($p['cooper_meters'])) $profile->test_12min = ['meters' => (int)$p['cooper_meters']];
+                if (!empty($p['test_5k_pace']))  $profile->test_5k    = $this->paceToJson($p['test_5k_pace']);
+                if (!empty($p['test_10k_pace'])) $profile->test_10k   = $this->paceToJson($p['test_10k_pace']);
+                if (!empty($p['marathon_pace'])) $profile->test_marathon = $this->hmsToJson($p['marathon_pace']);
+
+                if (!empty($p['goals']))    $profile->goals    = $this->explodeToArray($p['goals']);
+                if (!empty($p['injuries'])) $profile->injuries = $this->explodeToArray($p['injuries']);
+
+                if (!empty($goal)) {
+                    $profile->goal = array_filter([
+                        'distance' => $goal['distance'] ?? null,
+                        'time_hms' => $goal['time_hms'] ?? null,
+                        'date'     => $goal['date'] ?? null,
+                    ], fn ($v) => !is_null($v) && $v !== '');
+                }
+
+                $ftpMode = $p['ftp_mode'] ?? 'w';
+                $ftpWatt = $p['ftp_watt'] ?? null;
+                $ftpWkg  = $p['ftp_wkg'] ?? null;
+                if ($ftpMode === 'w' && $ftpWatt && ($profile->weight_kg ?? null)) {
+                    $ftpWkg = round($ftpWatt / (float)$profile->weight_kg, 2);
+                }
+                $profile->ftp = array_filter([
+                    'mode' => in_array($ftpMode, ['w','wkg'], true) ? $ftpMode : 'w',
+                    'watt' => $ftpWatt ? (int) $ftpWatt : null,
+                    'wkg'  => $ftpWkg  ? (float)$ftpWkg  : null,
+                ], fn($v) => !is_null($v));
+
+                $profile->save();
+
+                // [AK] gebruiks­count ophogen
+                if ($forceFake) {
+                    \App\Models\AccessKey::where('id', $ak['id'])->increment('uses_count');
+                }
+            });
+
+            // Opruimen
+            if ($forceFake) {
+                session()->forget('ak'); // key niet hergebruiken binnen dezelfde sessie
+            }
+
+            // Door naar intake (stap 3) zonder Stripe
+            return response()->json([
+                'redirect_url' => route('intake.index', ['step' => 2, 'advance' => 1]),
+            ], 200);
         }
 
-        $stripe = new StripeClient(config('services.stripe.secret'));
+        // 6) Echte Stripe flow
+        $successUrl = route('intake.index', ['step' => 2, 'advance' => 1]) . '&session_id={CHECKOUT_SESSION_ID}';
+        $cancelUrl  = route('intake.index', ['step' => 2, 'canceled' => 1]);
 
+        $stripe = new StripeClient(config('services.stripe.secret'));
         $productName = match ($data['package']) {
             'pakket_a' => '2BeFit - Basis Pakket (maandelijks)',
             'pakket_b' => '2BeFit - Chasing Goals Pakket (maandelijks)',
             'pakket_c' => '2BeFit - Elite Hyrox Pakket (maandelijks)',
         };
 
-        // Let op: geen subscription_data[cancel_at] meesturen (Stripe geeft anders error)
         $session = $stripe->checkout->sessions->create([
             'mode'        => 'subscription',
-            'success_url' => $successUrl . '&session_id={CHECKOUT_SESSION_ID}',
+            'success_url' => $successUrl,
             'cancel_url'  => $cancelUrl,
             'customer_email' => $data['email'],
             'locale'      => 'nl',
@@ -268,36 +337,371 @@ class CheckoutController extends Controller
                             'monthly_amount' => (string) $monthlyAmount,
                         ],
                     ],
-                    'recurring' => [
-                        'interval'       => 'month',
-                        'interval_count' => 1,
-                    ],
-                    'unit_amount' => (int) round($monthlyAmount * 100),
+                    'recurring'  => ['interval' => 'month', 'interval_count' => 1],
+                    'unit_amount'=> $unitAmountCents,
                 ],
                 'quantity' => 1,
             ]],
             'billing_address_collection' => 'required',
             'allow_promotion_codes'      => false,
             'metadata' => [
-                'flow'        => '2befit_intake',
-                'order_id'    => (string) $order->id,
-                'client_id'   => (string) $user->id,
-                'intake_id'   => (string) $intake->id,
-                'package'     => $data['package'],
-                'duration'    => (string) $data['duration'],
+                'flow'       => '2befit_intake',
+                'order_id'   => (string) $order->id,
+                'intake_id'  => (string) $intake->id,
+                'package'    => $data['package'],
+                'duration'   => (string) $data['duration'],
+                'email'      => $data['email'],
             ],
         ]);
 
-        // 4) Order bijwerken met provider_ref (session id), daarna redirect teruggeven
-        $order->provider_ref = $session->id;
-        $order->save();
+        $order->update(['provider_ref' => $session->id]);
+
+        Log::info('[checkout.create] stripe session created', [
+            'session_id' => $session->id,
+            'url'        => $session->url,
+        ]);
 
         return response()->json(['redirect_url' => $session->url], 201);
     }
 
-    // -------- Helpers --------
+    /**
+     * Bevestig betaling na terugkomst van Stripe.
+     */
+    public function confirm(Request $request)
+    {
+        Log::info('[checkout.confirm] start', [
+            'session_id' => $request->input('session_id'),
+            'ip'         => $request->ip(),
+        ]);
 
-    private function normalizeGender(string $g): ?string
+        $validated = $request->validate([
+            'session_id' => 'required|string',
+        ]);
+
+        try {
+            $stripe  = new StripeClient(config('services.stripe.secret'));
+            $session = $stripe->checkout->sessions->retrieve($validated['session_id'], []);
+
+            Log::info('[checkout.confirm] stripe session', [
+                'id'              => $session->id ?? null,
+                'mode'            => $session->mode ?? null,
+                'status'          => $session->status ?? null,
+                'payment_status'  => $session->payment_status ?? null,
+                'customer_email'  => $session->customer_details?->email ?? $session->customer_email ?? null,
+                'metadata'        => $session->metadata ?? [],
+            ]);
+
+            if (($session->payment_status ?? null) !== 'paid') {
+                Log::warning('[checkout.confirm] not paid', [
+                    'session_id'     => $session->id ?? null,
+                    'payment_status' => $session->payment_status ?? null,
+                ]);
+                return response()->json(['message' => 'Betaling niet bevestigd.'], 422);
+            }
+
+            $intakeId = (int)($session->metadata['intake_id'] ?? 0);
+            $orderId  = (int)($session->metadata['order_id']  ?? 0);
+            $email    = $session->customer_details?->email
+                        ?? $session->customer_email
+                        ?? ($session->metadata['email'] ?? null);
+
+            if (!$intakeId || !$email) {
+                Log::error('[checkout.confirm] missing metadata/email', [
+                    'intake_id' => $intakeId,
+                    'order_id'  => $orderId,
+                    'email'     => $email,
+                    'metadata'  => $session->metadata ?? [],
+                ]);
+                return response()->json(['message' => 'Onvolledige betaaldata (intake/email).'], 422);
+            }
+
+            [$user, $intake, $order] = DB::transaction(function () use ($intakeId, $orderId, $email) {
+                $intake = Intake::lockForUpdate()->find($intakeId);
+                if (!$intake) {
+                    Log::error('[checkout.confirm.tx] intake not found', ['intake_id' => $intakeId]);
+                    abort(404, 'Intake niet gevonden.');
+                }
+
+                $order = $orderId ? Order::lockForUpdate()->find($orderId) : null;
+
+                // 1) User
+                $nameFromPayload = $intake->payload['contact']['name'] ?? 'Nieuwe klant';
+                $user = User::firstOrCreate(
+                    ['email' => $email],
+                    [
+                        'name'     => $nameFromPayload,
+                        'role'     => 'client',
+                        'password' => Hash::make(Str::random(40)),
+                    ]
+                );
+
+                // 2) Intake koppelen
+                if (!$intake->client_id) {
+                    $intake->client_id = $user->id;
+                    $intake->save();
+                }
+
+                // 3) Order koppelen + betalen
+                if ($order) {
+                    $order->client_id = $user->id;
+                    $order->status    = 'paid';
+                    $order->paid_at   = now();
+                    $order->save();
+                }
+
+                // 4) ClientProfile invullen/mergen
+                $contact = $intake->payload['contact'] ?? [];
+                $p       = $intake->payload['profile'] ?? [];
+                $goal    = $intake->payload['goal'] ?? [];
+
+                $profile = ClientProfile::firstOrNew(['user_id' => $user->id]);
+
+                $profile->birthdate        = $contact['dob'] ?? $profile->birthdate;
+                $profile->gender           = $this->normalizeGender($contact['gender'] ?? null) ?? $profile->gender;
+                $profile->coach_preference = $contact['preferred_coach'] ?? $profile->coach_preference ?? 'none';
+                $profile->period_weeks     = (int)($intake->payload['duration_weeks'] ?? $profile->period_weeks ?? 12);
+
+                // Adres
+                $existingAddress = is_array($profile->address) ? $profile->address : [];
+                $profile->address = array_merge($existingAddress, array_filter([
+                    'street'       => $contact['street'] ?? null,
+                    'house_number' => $contact['house_number'] ?? null,
+                    'postcode'     => $contact['postcode'] ?? null,
+                ], fn($v) => !is_null($v)));
+
+                // Telefoon
+                if (!empty($contact['phone'])) {
+                    $profile->phone_e164 = $contact['phone'];
+                }
+
+                // Metingen & vrije tekst
+                $profile->height_cm = $p['height_cm'] ?? $profile->height_cm;
+                $profile->weight_kg = $p['weight_kg'] ?? $profile->weight_kg;
+
+                $existingFrequency = is_array($profile->frequency) ? $profile->frequency : [];
+                $profile->frequency = array_merge($existingFrequency, array_filter([
+                    'sessions_per_week'   => $p['max_days_per_week'] ?? null,
+                    'minutes_per_session' => $p['session_minutes'] ?? null,
+                ], fn($v) => !is_null($v)));
+
+                $profile->background = $p['sport_background'] ?? $profile->background;
+                $profile->facilities = $p['facilities'] ?? $profile->facilities;
+                $profile->materials  = $p['materials'] ?? $profile->materials;
+                $profile->work_hours = $p['working_hours'] ?? $profile->work_hours;
+
+                // Hartslag
+                $existingHR = is_array($profile->heartrate) ? $profile->heartrate : [];
+                $profile->heartrate = array_merge($existingHR, array_filter([
+                    'resting' => $p['rest_hr_bpm'] ?? null,
+                    'max'     => $p['hr_max_bpm'] ?? null,
+                ], fn($v) => !is_null($v)));
+
+                // Tests
+                if (!empty($p['cooper_meters'])) $profile->test_12min = ['meters' => (int)$p['cooper_meters']];
+                if (!empty($p['test_5k_pace']))  $profile->test_5k    = $this->paceToJson($p['test_5k_pace']);
+                if (!empty($p['test_10k_pace'])) $profile->test_10k   = $this->paceToJson($p['test_10k_pace']);
+                if (!empty($p['marathon_pace'])) $profile->test_marathon = $this->hmsToJson($p['marathon_pace']);
+
+                if (!empty($p['goals']))    $profile->goals    = $this->explodeToArray($p['goals']);
+                if (!empty($p['injuries'])) $profile->injuries = $this->explodeToArray($p['injuries']);
+
+                // Doelwedstrijd → profiel.goal
+                if (!empty($goal)) {
+                    $profile->goal = array_filter([
+                        'distance' => $goal['distance'] ?? null,
+                        'time_hms' => $goal['time_hms'] ?? null,
+                        'date'     => $goal['date'] ?? null,
+                    ], fn ($v) => !is_null($v) && $v !== '');
+                }
+
+                // FTP
+                $ftpMode = $p['ftp_mode'] ?? 'w';
+                $ftpWatt = $p['ftp_watt'] ?? null;
+                $ftpWkg  = $p['ftp_wkg'] ?? null;
+                if ($ftpMode === 'w' && $ftpWatt && ($profile->weight_kg ?? null)) {
+                    $ftpWkg = round($ftpWatt / (float)$profile->weight_kg, 2);
+                }
+                $profile->ftp = array_filter([
+                    'mode' => in_array($ftpMode, ['w','wkg'], true) ? $ftpMode : 'w',
+                    'watt' => $ftpWatt ? (int) $ftpWatt : null,
+                    'wkg'  => $ftpWkg  ? (float)$ftpWkg  : null,
+                ], fn($v) => !is_null($v));
+
+                $profile->save();
+
+                return [$user, $intake, $order];
+            });
+
+            Log::info('[checkout.confirm] done', [
+                'user_id'      => $user->id,
+                'intake_id'    => $intake->id,
+                'order_id'     => $order?->id,
+                'order_status' => $order?->status,
+            ]);
+
+            return response()->json(['ok' => true]);
+
+        } catch (\Throwable $e) {
+            Log::error('[checkout.confirm] exception', [
+                'message' => $e->getMessage(),
+                'trace'   => substr($e->getTraceAsString(), 0, 2000),
+            ]);
+            return response()->json(['message' => 'Er ging iets mis bij het bevestigen van de betaling.'], 500);
+        }
+    }
+
+    /**
+     * Tussentijds opslaan van velden uit de wizard.
+     */
+    public function progress(Request $request)
+    {
+        // 1) Draft uit sessie
+        $intakeId = (int) session('draft_intake_id', 0);
+        if (!$intakeId) {
+            Log::info('[intake.progress] no draft_intake_id in session – noop', ['ip' => $request->ip()]);
+            return response()->json(['ok' => true]);
+        }
+
+        // 2) Vind intake
+        $intake = Intake::find($intakeId);
+        if (!$intake) {
+            Log::info('[intake.progress] intake not found – noop', ['intake_id' => $intakeId]);
+            return response()->json(['ok' => true]);
+        }
+
+        // 3) Huidige payload
+        $payload = $intake->payload ?? [];
+        $payload['profile']   = $payload['profile']   ?? [];
+        $payload['goal']      = $payload['goal']      ?? [];
+        $payload['run_paces'] = $payload['run_paces'] ?? [];
+        $payload['ftp']       = $payload['ftp']       ?? [];
+
+        // 4) Alleen bekende keys mergen
+        $in = $request->all();
+
+        foreach ([
+            'height_cm','weight_kg','injuries','goals','max_days_per_week','session_minutes',
+            'sport_background','facilities','materials','working_hours','cooper_meters',
+            'hr_max_bpm','rest_hr_bpm','test_5k_pace','test_10k_pace','marathon_pace',
+            'ftp_mode','ftp_watt','ftp_wkg','goal_distance','goal_time_hms','goal_ref_date'
+        ] as $k) {
+            if (array_key_exists($k, $in)) {
+                $payload['profile'][$k] = $in[$k];
+            }
+        }
+
+        foreach (['goal_distance' => 'distance', 'goal_time_hms' => 'time_hms', 'goal_ref_date' => 'date'] as $from => $to) {
+            if (array_key_exists($from, $in)) {
+                $payload['goal'][$to] = $in[$from];
+            }
+        }
+
+        foreach (['test_5k_pace' => 'p5k', 'test_10k_pace' => 'p10k', 'marathon_pace' => 'marathon'] as $from => $to) {
+            if (array_key_exists($from, $in)) {
+                $payload['run_paces'][$to] = $in[$from];
+            }
+        }
+
+        foreach (['ftp_mode' => 'mode', 'ftp_watt' => 'watt', 'ftp_wkg' => 'wkg'] as $from => $to) {
+            if (array_key_exists($from, $in)) {
+                $payload['ftp'][$to] = $in[$from];
+            }
+        }
+
+        // 5) Intake payload opslaan
+        $intake->payload = $payload;
+        $intake->save();
+
+        // 6) Spiegel naar ClientProfile ALS intake al aan user hangt
+        if ($intake->client_id) {
+            $profile = ClientProfile::firstOrNew(['user_id' => $intake->client_id]);
+
+            // blessures / doelen → arrays
+            if (array_key_exists('injuries', $in)) $profile->injuries = $this->explodeToArray((string) $in['injuries']);
+            if (array_key_exists('goals', $in))    $profile->goals    = $this->explodeToArray((string) $in['goals']);
+
+            // metingen
+            if (array_key_exists('height_cm', $in)) $profile->height_cm = $in['height_cm'] ?: null;
+            if (array_key_exists('weight_kg', $in)) $profile->weight_kg = $in['weight_kg'] ?: null;
+
+            // frequentie
+            if (array_key_exists('max_days_per_week', $in) || array_key_exists('session_minutes', $in)) {
+                $existingFrequency = is_array($profile->frequency) ? $profile->frequency : [];
+                $profile->frequency = array_merge($existingFrequency, array_filter([
+                    'sessions_per_week'   => $in['max_days_per_week'] ?? null,
+                    'minutes_per_session' => $in['session_minutes']   ?? null,
+                ], fn($v) => !is_null($v)));
+            }
+
+            // vrije tekst
+            if (array_key_exists('sport_background', $in)) $profile->background = $in['sport_background'] ?: null;
+            if (array_key_exists('facilities', $in))       $profile->facilities = $in['facilities'] ?: null;
+            if (array_key_exists('materials', $in))        $profile->materials  = $in['materials'] ?: null;
+            if (array_key_exists('working_hours', $in))    $profile->work_hours = $in['working_hours'] ?: null;
+
+            // doelwedstrijd → profiel.goal
+            $goalKeysPresent = array_key_exists('goal_distance', $in)
+                            || array_key_exists('goal_time_hms', $in)
+                            || array_key_exists('goal_ref_date', $in);
+            if ($goalKeysPresent) {
+                $existingGoal = is_array($profile->goal) ? $profile->goal : [];
+                $profile->goal = array_merge($existingGoal, array_filter([
+                    'distance' => $in['goal_distance'] ?? null,
+                    'time_hms' => $in['goal_time_hms'] ?? null,
+                    'date'     => $in['goal_ref_date'] ?? null,
+                ], fn ($v) => !is_null($v) && $v !== ''));
+            }
+
+            // hartslag
+            if (array_key_exists('hr_max_bpm', $in) || array_key_exists('rest_hr_bpm', $in)) {
+                $existingHR = is_array($profile->heartrate) ? $profile->heartrate : [];
+                $profile->heartrate = array_merge($existingHR, array_filter([
+                    'resting' => $in['rest_hr_bpm'] ?? null,
+                    'max'     => $in['hr_max_bpm']  ?? null,
+                ], fn($v) => !is_null($v)));
+            }
+
+            // tests
+            if (array_key_exists('cooper_meters', $in) && $in['cooper_meters'] !== null && $in['cooper_meters'] !== '') {
+                $profile->test_12min = ['meters' => (int) $in['cooper_meters']];
+            }
+            if (array_key_exists('test_5k_pace', $in) && $in['test_5k_pace']) {
+                $profile->test_5k = $this->paceToJson($in['test_5k_pace']);
+            }
+            if (array_key_exists('test_10k_pace', $in) && $in['test_10k_pace']) {
+                $profile->test_10k = $this->paceToJson($in['test_10k_pace']);
+            }
+            if (array_key_exists('marathon_pace', $in) && $in['marathon_pace']) {
+                $profile->test_marathon = $this->hmsToJson($in['marathon_pace']);
+            }
+
+            // FTP bijwerken
+            if (array_key_exists('ftp_mode', $in) || array_key_exists('ftp_watt', $in) || array_key_exists('ftp_wkg', $in)) {
+                $existingFtp = is_array($profile->ftp) ? $profile->ftp : [];
+                $ftpMode = $in['ftp_mode'] ?? ($existingFtp['mode'] ?? 'w');
+                $ftpWatt = $in['ftp_watt'] ?? ($existingFtp['watt'] ?? null);
+                $ftpWkg  = $in['ftp_wkg']  ?? ($existingFtp['wkg']  ?? null);
+
+                if (($ftpMode === 'w' || !$ftpMode) && $ftpWatt && ($profile->weight_kg ?? null)) {
+                    $ftpWkg = round(((float)$ftpWatt) / (float)$profile->weight_kg, 2);
+                }
+
+                $profile->ftp = array_filter([
+                    'mode' => in_array($ftpMode, ['w','wkg'], true) ? $ftpMode : 'w',
+                    'watt' => $ftpWatt !== '' ? ($ftpWatt ? (int)$ftpWatt : null) : null,
+                    'wkg'  => $ftpWkg  !== '' ? ($ftpWkg  ? (float)$ftpWkg  : null) : null,
+                ], fn($v) => !is_null($v));
+            }
+
+            $profile->save();
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    // ----------------- Helpers -----------------
+
+    private function normalizeGender(?string $g): ?string
     {
         return $g === 'man' ? 'm' : ($g === 'vrouw' ? 'f' : null);
     }
@@ -305,36 +709,42 @@ class CheckoutController extends Controller
     private function explodeToArray(?string $text): ?array
     {
         if (!$text) return null;
-        // splits op ; , of newline en trim
         $parts = preg_split('/[;\n,]+/', $text);
         $clean = array_values(array_filter(array_map(fn($s) => trim($s), $parts)));
         return $clean ?: null;
     }
 
-    /** "MM:SS" → [minutes, seconds] */
-    private function parsePaceToMinSec(string $pace): array
+    /** "MM:SS" → ['minutes'=>m,'seconds'=>s] */
+    private function paceToJson(string $pace): array
     {
         [$m, $s] = array_map('intval', explode(':', $pace));
         $m = max(0, min(59, $m));
         $s = max(0, min(59, $s));
-        return [$m, $s];
+        return ['minutes' => $m, 'seconds' => $s];
     }
 
-    /** Vind coach-id op basis van slug: roy|eline|nicky. none → null. */
+    /** "HH:MM:SS" → ['hours'=>h,'minutes'=>m,'seconds'=>s] */
+    private function hmsToJson(string $hms): array
+    {
+        [$h, $m, $s] = array_map('intval', explode(':', $hms));
+        $h = max(0, min(99, $h));
+        $m = max(0, min(59, $m));
+        $s = max(0, min(59, $s));
+        return ['hours' => $h, 'minutes' => $m, 'seconds' => $s];
+    }
+
+    /** Vind coach-id op basis van slug (optioneel) */
     private function findCoachIdByPreference(string $pref): ?int
     {
         if ($pref === 'none') return null;
-
         $map = [
             'roy'   => ['name' => 'Roy',   'email' => 'roy@example.com'],
             'eline' => ['name' => 'Eline', 'email' => 'eline@example.com'],
             'nicky' => ['name' => 'Nicky', 'email' => 'nicky@example.com'],
         ];
-
         if (!isset($map[$pref])) return null;
 
         $m = $map[$pref];
-
         $coach = User::query()
             ->where('role', 'coach')
             ->where(function ($q) use ($m) {

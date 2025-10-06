@@ -14,12 +14,34 @@
   $cardClass  = 'p-5 bg-white rounded-3xl border border-gray-300';
   $btnPrimary = 'cursor-pointer px-6 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded';
   $btnGhost   = 'text-xs cursor-pointer opacity-50 hover:opacity-100 transition duration-300 font-semibold';
+  $ak = session('ak');  // ['package'=>..., 'duration'=>...]
 @endphp
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
-<div class="max-w-3xl mx-auto" x-data="intakeWizard()" x-init="init()">
+<div class="max-w-3xl mx-auto" x-data="intakeWizard({{ json_encode($ak ?? []) }})" x-init="init()">
+  @if(request()->has('key'))
+    <script>
+      (function () {
+        try {
+          // Intake wizard state + eventuele checkout-flags opruimen
+          localStorage.removeItem('intakeWizard_v1');
+          sessionStorage.removeItem('intakePending');
+          sessionStorage.removeItem('intakeConfirmed');
+        } catch (e) {}
+
+        // Key direct uit de URL strippen zodat refresh "schoon" is
+        try {
+          var url = new URL(window.location.href);
+          url.searchParams.delete('key');
+          var qs = url.searchParams.toString();
+          var clean = url.pathname + (qs ? '?' + qs : '') + url.hash;
+          history.replaceState(null, '', clean);
+        } catch (e) {}
+      })();
+    </script>
+  @endif
   <h1 class="text-2xl font-bold mb-2 flex items-center">
     <div class="flex">
       <div class="w-10 h-10 border-2 border-[#f9f6f1] rounded-full bg-black bg-cover bg-top relative bg-[url(https://cdn6.site-media.eu/images/640%2C1160x772%2B130%2B112/18694492/coachNicky-MjbAPBl6Pr1a23o9d6zbqA.webp)]"></div>
@@ -37,6 +59,14 @@
     Goed om je te zien en welkom bij 2BeFit Coaching X Team Verhoeven<br>
     Laten we even je persoonlijke profiel samenstellen. Op basis hiervan worden de trainingen samengesteld.
   </p>
+  @if(!empty($ak))
+    <div class="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 p-3 text-sm">
+      <strong>Key geactiveerd:</strong><br>
+      Dit intake-traject wordt afgehandeld zonder betaling.<br><br>
+      Jouw pakket: <strong>{{ $ak['package'] === 'pakket_a' ? 'Basis' : ($ak['package'] === 'pakket_b' ? 'Chasing Goals' : 'Elite Hyrox') }}</strong><br>
+      Traject: <strong>{{ $ak['duration'] }}</strong> weken.
+    </div>
+  @endif
 
   <div class="{{ $cardClass }}">
     <!-- Generieke foutmelding -->
@@ -75,9 +105,10 @@
               <p class="text-sm font-medium text-black mb-1">Wat is je telefoonnummer?</p>
               <div class="w-full">
                 <input id="phone" type="tel" name="phone" required
-                       class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
-                              border-gray-300 hover:border-[#c7c7c7]"
-                       :class="errors.phone ? 'border-red-500 focus:border-red-500' : ''">
+                  x-model="form.phone"
+                  class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
+                          border-gray-300 hover:border-[#c7c7c7]"
+                  :class="errors.phone ? 'border-red-500 focus:border-red-500' : ''">
               </div>
             </div>
           </div>
@@ -172,28 +203,6 @@
 
         <div class="grid grid-cols-4 gap-3 mb-6">
           <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
-            <img src="/assets/roy.webp" alt="Roy" class="mb-4">
-            <div class="flex items-center gap-3 ">
-              <input type="radio" name="preferred_coach" value="roy"   x-model="form.preferred_coach" class="sr-only peer">
-              <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
-                          peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
-              </span>
-              <span class="text-sm font-medium">Roy</span>
-            </div>
-          </label>
-
-          <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
-            <img src="/assets/eline.webp" alt="Eline" class="mb-4">
-            <div class="flex items-center gap-3 ">
-              <input type="radio" name="preferred_coach" value="eline" x-model="form.preferred_coach" class="sr-only peer">
-              <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
-                          peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
-              </span>
-              <span class="text-sm font-medium">Eline</span>
-            </div>
-          </label>
-
-          <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
             <img src="/assets/nicky.webp" alt="Nicky" class="mb-4">
             <div class="flex items-center gap-3 ">
               <input type="radio" name="preferred_coach" value="nicky" x-model="form.preferred_coach" class="sr-only peer">
@@ -203,6 +212,28 @@
               <span class="text-sm font-medium">Nicky</span>
             </div>
           </label>
+          
+          <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
+            <img src="/assets/eline.webp" alt="Eline" class="mb-4">
+            <div class="flex items-center gap-3 ">
+              <input type="radio" name="preferred_coach" value="eline" x-model="form.preferred_coach" class="sr-only peer">
+              <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
+              peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
+            </span>
+            <span class="text-sm font-medium">Eline</span>
+          </div>
+        </label>
+        
+        <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
+          <img src="/assets/roy.webp" alt="Roy" class="mb-4">
+          <div class="flex items-center gap-3 ">
+            <input type="radio" name="preferred_coach" value="roy"   x-model="form.preferred_coach" class="sr-only peer">
+            <span class="w-4 h-4 rounded-full border border-gray-300 inline-flex items-center justify-center
+                        peer-checked:bg-[#c8ab7a] peer-checked:border-[#c8ab7a]">
+            </span>
+            <span class="text-sm font-medium">Roy</span>
+          </div>
+        </label>
 
           <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
             <div class="w-full h-[223.2px] bg-gray-100 rounded-xl mb-4 flex items-center justify-center">
@@ -226,7 +257,7 @@
     </template>
 
     <!-- STEP 2: Pakket kiezen -->
-    <template x-if="step === 2">
+    <template x-if="!hasKey && step === 2">
       <div>
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-md font-semibold">Kies je pakket</h3>
@@ -420,14 +451,14 @@
                       </div>
 
                       <div class="mt-auto flex flex-wrap gap-2">
-                        <button type="button" class="{{ $btnPrimary }}"
+                        <button type="button" class="cursor-pointer w-full py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded"
                                 :disabled="isPaying"
                                 @click="choosePackage('{{ $pkg['key'] }}', 24)">
                           24 weken traject kiezen
                           <span class="px-2 py-1 text-xs ml-2 rounded bg-[#e5c791]">{{ $pkg['cta']['discount'] }}</span>
                         </button>
 
-                        <button type="button" class="{{ $btnPrimary }}"
+                        <button type="button" class="cursor-pointer w-full py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded"
                                 :disabled="isPaying"
                                 @click="choosePackage('{{ $pkg['key'] }}', 12)">
                           12 weken traject kiezen
@@ -439,6 +470,8 @@
               @endforeach
             </div>
           </div>
+          <div class="pointer-events-none absolute z-999 right-0 top-0 h-full w-10 md:w-16
+            bg-gradient-to-l from-white to-transparent"></div>
         </div>
 
         <div class="flex items-center justify-between gap-2">
@@ -780,10 +813,11 @@
               :class="errors.goal_distance ? 'border-red-500 focus:border-red-500' : ''"
             >
               <option value="">Kies een afstand</option>
-              <option value="HYROXPRO">HYROX Pro</option>
-              <option value="HYROXDOUBLE">HYROX Double</option>
-              <option value="HYROXMIXDOUBLE">HYROX Mix Double</option>
-              <option value="HYROXSINGLE">HYROX Single</option>
+              <option value="HYROX_OPEN">HYROX Open</option>
+              <option value="HYROX_PRO">HYROX Pro</option>
+              <option value="HYROX_DOUBLES">HYROX Doubles</option>
+              <option value="HYROX_DOUBLES_PRO">HYROX Doubles Pro</option>
+              <option value="HYROX_MIXED_DOUBLES">HYROX Mixed Doubles</option>
               <option value="5K">5 km</option>
               <option value="10K">10 km</option>
               <option value="21K">Halve marathon (21,1 km)</option>
@@ -848,36 +882,36 @@
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p class="text-sm font-medium text-black mb-1">5 km pace</p>
+              <p class="text-sm font-medium text-black mb-1">Totale tijd op 5 km (MM:SS)</p>
               <input
                 id="test_5k_pace"
                 name="test_5k_pace"
                 type="text"
-                placeholder="bijv. 04:55 (verplicht)"
+                placeholder="bijv. 24:30 "
                 x-model.trim="form.test_5k_pace"
                 class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm border-gray-300 hover:border-[#c7c7c7]"
                 :class="errors.test_5k_pace ? 'border-red-500 focus:border-red-500' : ''"
               >
             </div>
             <div>
-              <p class="text-sm font-medium text-black mb-1">10 km pace</p>
+              <p class="text-sm font-medium text-black mb-1">Totale tijd op 10 km (MM:SS)</p>
               <input
                 id="test_10k_pace"
                 name="test_10k_pace"
                 type="text"
-                placeholder="bijv. 05:10"
+                placeholder="bijv. 51:40"
                 x-model.trim="form.test_10k_pace"
                 class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm border-gray-300 hover:border-[#c7c7c7]"
                 :class="errors.test_10k_pace ? 'border-red-500 focus:border-red-500' : ''"
               >
             </div>
             <div>
-              <p class="text-sm font-medium text-black mb-1">Marathon pace</p>
+              <p class="text-sm font-medium text-black mb-1">Totale tijd marathon (HH:MM:SS)</p>
               <input
                 id="marathon_pace"
                 name="marathon_pace"
                 type="text"
-                placeholder="bijv. 05:40"
+                placeholder="bijv. 03:59:08"
                 x-model.trim="form.marathon_pace"
                 class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm border-gray-300 hover:border-[#c7c7c7]"
                 :class="errors.marathon_pace ? 'border-red-500 focus:border-red-500' : ''"
@@ -1014,633 +1048,502 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
-  function intakeWizard() {
+  // Intake wizard – versie met key-ondersteuning (ak) om stap 2 te skippen/forceren
+  // Gebruik in Blade: x-data="intakeWizard({{ json_encode($ak ?? []) }})"
+  function intakeWizard(ak = null) {
     const STORAGE_KEY = 'intakeWizard_v1';
 
     return {
-      isPaying: false,
+      // --- flags vanuit server ---
+      hasKey: !!(ak && ak.package && ak.duration),
 
-      // stappen
-      steps: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+      // --- state ---
+      isPaying: false,
+      steps: [], // wordt in init() gezet op basis van hasKey
       step: 0,
-      get totalSteps() { return this.steps.length },
+      get totalSteps(){ return this.steps.length },
 
       form: {
-        name: '',
-        email: '',
-        phone: '',
-        dob: '',
-        gender: '',
-        street: '',
-        house_number: '',
-        postcode: '',
-        preferred_coach: '',
-        package: '',
-        duration: null,
-        height_cm: null,
-        weight_kg: null,
-        injuries: '',
-        goals: '',
-        max_days_per_week: null,
-        session_minutes: null,
-        sport_background: '',
-        facilities: '',
-        materials: '',
-        working_hours: '',
-        goal_distance: '',
-        goal_time_hms: '',
-        goal_ref_date: '',
-        cooper_meters: null,
-        test_5k_pace: '',
-        test_10k_pace: '',
-        marathon_pace: '',
-        hr_max_bpm: null,
-        rest_hr_bpm: null,
-        hr_estimate_from_age: false,
-        ftp_mode: 'w',      // 'w' of 'wkg'
-        ftp_watt: null,
-        ftp_wkg: null,
+        // stap 0
+        name:'', email:'', phone:'', dob:'', gender:'',
+        street:'', house_number:'', postcode:'',
+        // stap 1/2
+        preferred_coach:'',
+        package:'', duration:null, // bij key vullen we deze vooraf
+        // overige
+        height_cm:null, weight_kg:null, injuries:'', goals:'',
+        max_days_per_week:null, session_minutes:null,
+        sport_background:'', facilities:'', materials:'', working_hours:'',
+        goal_distance:'', goal_time_hms:'', goal_ref_date:'',
+        cooper_meters:null, test_5k_pace:'', test_10k_pace:'', marathon_pace:'',
+        hr_max_bpm:null, rest_hr_bpm:null, hr_estimate_from_age:false,
+        ftp_mode:'w', ftp_watt:null, ftp_wkg:null,
       },
 
+      // --- derived ---
       get estimatedHRMax() {
         if (!this.form.dob) return '';
-        const dob = new Date(this.form.dob);
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-        const est = 220 - age;
-        return isFinite(est) ? est : '';
+        const d=new Date(this.form.dob), t=new Date();
+        let age=t.getFullYear()-d.getFullYear();
+        const m=t.getMonth()-d.getMonth();
+        if (m<0 || (m===0 && t.getDate()<d.getDate())) age--;
+        const est=220-age; return isFinite(est)?est:'';
       },
-      get computedFtpWkg() {
-        if (this.form.ftp_mode === 'w' && this.form.ftp_watt && this.form.weight_kg) {
-          const v = this.form.ftp_watt / this.form.weight_kg;
-          return Math.round(v * 100) / 100;
+      get computedFtpWkg(){
+        if (this.form.ftp_mode==='w' && this.form.ftp_watt && this.form.weight_kg) {
+          const v=this.form.ftp_watt/this.form.weight_kg; return Math.round(v*100)/100;
         }
-        if (this.form.ftp_mode === 'wkg' && this.form.ftp_wkg) {
-          return Math.round(this.form.ftp_wkg * 100) / 100;
-        }
+        if (this.form.ftp_mode==='wkg' && this.form.ftp_wkg) return Math.round(this.form.ftp_wkg*100)/100;
         return null;
       },
-      get computedFtpWkgDisplay() {
-        const v = this.computedFtpWkg;
-        return v ? `${v.toFixed(2)} W/kg` : '—';
-      },
+      get computedFtpWkgDisplay(){ const v=this.computedFtpWkg; return v?`${v.toFixed(2)} W/kg`:'—'; },
 
-      // state
-      errors: {},
-      _iti: null,
-      _saveDebounced: null,
+      // --- ui/errors/helpers ---
+      errors:{},
+      _iti:null, _saveDebounced:null,
+      _swiper:null, swiperReady:false, swiperAtStart:true, swiperAtEnd:false,
 
-      // --- Swiper state ---
-      _swiper: null,
-      swiperReady: false,
-      swiperAtStart: true,
-      swiperAtEnd: false,
+      debounce(fn, delay=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),delay); }; },
+      saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({step:this.step, form:this.form})); }catch(e){} },
+      loadState(){
+        try{
+          const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return;
+          const p=JSON.parse(raw); if(p?.form) this.form={...this.form, ...p.form};
+          if(Number.isInteger(p?.step) && p.step>=0 && p.step<this.totalSteps) this.step=p.step;
+        }catch(e){}
+      },
+      clearState(){ try{ localStorage.removeItem(STORAGE_KEY);}catch(e){} },
 
-      // utils
-      debounce(fn, delay = 250) {
-        let t;
-        return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), delay); };
-      },
-      saveState() {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ step: this.step, form: this.form })); } catch (e) {}
-      },
-      loadState() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return;
-          const parsed = JSON.parse(raw);
-          if (parsed?.form) this.form = { ...this.form, ...parsed.form };
-          if (Number.isInteger(parsed?.step) && parsed.step >= 0 && parsed.step < this.totalSteps) this.step = parsed.step;
-        } catch (e) {}
-      },
-      clearState() { try { localStorage.removeItem(STORAGE_KEY); } catch (e) {} },
+      init(){
+        // Stel stappen samen: met key halen we 2 (pakket) eruit
+        this.steps = this.hasKey
+          ? [0,1,3,4,5,6,7,8,9,10,11,12,13,14]
+          : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14];
 
-      init() {
+        // Prefill package/duration als er een key is
+        if (this.hasKey) {
+          this.form.package  = ak.package;
+          this.form.duration = ak.duration;
+        }
+
         this.loadState();
 
-        // --- URL hints (alleen toepassen als we net van checkout komen) ---
-        const params   = new URLSearchParams(window.location.search);
-        const urlStep  = parseInt(params.get('step'), 10);
-        const advance  = params.get('advance') === '1';
-        const canceled = params.get('canceled') === '1';
+        const params=new URLSearchParams(window.location.search);
+        const urlStep=parseInt(params.get('step')||'',10);
+        const advance=params.get('advance')==='1';
+        const canceled=params.get('canceled')==='1';
+        const sessionId=params.get('session_id');
 
-        // Waren we onderweg naar checkout?
-        let cameFromCheckout = false;
-        try { cameFromCheckout = sessionStorage.getItem('intakePending') === '1'; } catch (e) {}
-
-        // 'step' uit URL mag altijd (handig voor directe deeplinks), maar clamp hem wel
-        if (!Number.isNaN(urlStep)) {
-          this.step = Math.min(Math.max(urlStep, 0), this.totalSteps - 1);
+        // was user onderweg naar checkout?
+        let cameFromCheckout=false;
+        try{ cameFromCheckout = sessionStorage.getItem('intakePending')==='1'; }catch(e){}
+        if (!cameFromCheckout) {
+          // fallback: als we advance=1 of session_id in URL hebben, behandelen als vanuit checkout
+          cameFromCheckout = advance || !!sessionId;
         }
 
-        // Alleen verwerken als we echt uit checkout komen
-        if (cameFromCheckout && advance) {
-          // Succes → 1 stap verder
-          this.step = Math.min(this.step + 1, this.totalSteps - 1);
+        // URL-step heeft voorrang; corrigeer eventuele 2 → 3 als key actief is
+        if(!Number.isNaN(urlStep)) {
+          this.step = Math.min(Math.max(urlStep,0), this.totalSteps-1);
+          if (this.hasKey && this.step === 2) this.step = 3;
+          this.saveState();
+        } else {
+          // Als localStorage nog 2 bevat maar we key hebben, corrigeer
+          if (this.hasKey && this.step === 2) this.step = 3;
         }
-        // Geannuleerd → terug naar stap 2 (kies pakket)
-        if (cameFromCheckout && canceled) {
-          this.step = 2;
-        }
 
-        // Flag altijd opruimen zodat refresh niets opnieuw triggert
-        try { sessionStorage.removeItem('intakePending'); } catch (e) {}
-
-        // Fallback: als step door wat dan ook buiten bereik is → 0
-        if (![0,1,2,3,4,5,6,7,8,9,10,11,12,13,14].includes(this.step)) this.step = 0;
-
-        // autosave + watchers
-        this._saveDebounced = this.debounce(() => this.saveState(), 200);
-        // sla álle wijzigingen in form (ook nested) op
-        this.$watch('form', () => this._saveDebounced(), { deep: true });
-
-        // (optionele fallback als jouw Alpine versie geen { deep: true } ondersteunt)
-        ;[
-          'name','email','phone','dob','gender','street','house_number','postcode',
-          'package','duration','height_cm','weight_kg'
-        ].forEach(k => this.$watch(`form.${k}`, () => this._saveDebounced()));
-        this.$watch('step', (val, oldVal) => {
-          this._saveDebounced();
-          if (oldVal === 0) this.destroyTelInput();
-          if (val === 0) this.$nextTick(() => this.initTelInput());
-          if (val === 2) { this.$nextTick(() => { initPackagesSwiperAndBind(); }); }
-          else if (oldVal === 2) { this.destroyPackagesSwiper(); }
-        });
-
-        // init op first paint
-        this.$nextTick(() => {
-          const el = document.getElementById('dob');
-          if (el) {
-            const today = new Date();
-            const max = today.toISOString().split('T')[0];
-            const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate());
-            const min = minDate.toISOString().split('T')[0];
-            el.setAttribute('min', min);
-            el.setAttribute('max', max);
-          }
-          if (this.step === 0) this.initTelInput();
-          if (this.step === 2) initPackagesSwiperAndBind();
-
-          window.addEventListener('packages-swiper-ready', (e) => {
-            const s = e?.detail?.swiper; if (!s) return;
-            this.bindSwiper(s);
-            this.updateSwiperEdges();
-            requestAnimationFrame(() => this.updateSwiperEdges());
+        // Als we terug zijn van Stripe met session_id -> bevestigen
+        if (sessionId && !sessionStorage.getItem('intakeConfirmed')) {
+          this.doConfirm(sessionId).finally(()=>{
+            if (advance) {
+              this.step = Math.max(this.step, 3);
+            }
+            this.stripUrlParams();
+            this.saveState();
           });
-
-          // Optioneel: maak de URL schoon (verwijder advance/canceled/step uit adresbalk)
-          if (advance || canceled || !Number.isNaN(urlStep)) {
-            const cleanUrl = window.location.pathname;
-            history.replaceState(null, '', cleanUrl);
+        } else {
+          // Geen session_id: FAKE of direct terug
+          if (cameFromCheckout && advance) {
+            this.step = Math.max(this.step, 3);
           }
+          if (cameFromCheckout && canceled) {
+            // als key actief is bestaat stap 2 niet meer; ga terug naar coach (1)
+            this.step = this.hasKey ? 1 : 2;
+          }
+          this.stripUrlParams();
+          this.saveState();
+        }
+
+        // Ruim checkout-flags op
+        try{
+          sessionStorage.removeItem('intakePending');
+          if (sessionId) sessionStorage.setItem('intakeConfirmed','1');
+        }catch(e){}
+
+        // Guards
+        if (!this.steps.includes(this.step)) this.step=this.steps[0];
+
+        // Debounced autosave
+        this._saveDebounced=this.debounce(()=>this.saveState(), 200);
+        this.$watch('form', ()=>this._saveDebounced(), { deep:true });
+        ['name','email','phone','dob','gender','street','house_number','postcode','package','duration','height_cm','weight_kg']
+          .forEach(k=>this.$watch(`form.${k}`, ()=>this._saveDebounced()));
+        this.$watch('step', (val, oldVal)=>{
+          this._saveDebounced();
+          if (oldVal===0) this.destroyTelInput();
+          if (val===0) this.$nextTick(()=>this.initTelInput());
+
+          // Init/Destroy Swiper alleen als stap 2 bestaat (dus geen key)
+          if (!this.hasKey && val===2) {
+            this.$nextTick(()=>{ initPackagesSwiperAndBind(); });
+          } else if (!this.hasKey && oldVal===2) {
+            this.destroyPackagesSwiper();
+          }
+        });
+
+        this.$nextTick(()=>{
+          const el=document.getElementById('dob');
+          if (el){
+            const today=new Date();
+            const max=today.toISOString().split('T')[0];
+            const minDate=new Date(today.getFullYear()-80, today.getMonth(), today.getDate());
+            const min=minDate.toISOString().split('T')[0];
+            el.setAttribute('min',min); el.setAttribute('max',max);
+          }
+          if (this.step===0) this.initTelInput();
+          if (!this.hasKey && this.step===2) initPackagesSwiperAndBind();
+
+          window.addEventListener('packages-swiper-ready',(e)=>{
+            const s=e?.detail?.swiper; if(!s) return;
+            this.bindSwiper(s); this.updateSwiperEdges(); requestAnimationFrame(()=>this.updateSwiperEdges());
+          });
         });
       },
 
-      packageLabel(key) {
-        if (key === 'pakket_a') return 'Basis Pakket';
-        if (key === 'pakket_b') return 'Chasing Goals Pakket';
-        if (key === 'pakket_c') return 'Elite Hyrox Pakket';
-        return '';
+      stripUrlParams(){
+        const clean=window.location.pathname;
+        history.replaceState(null,'', clean);
       },
 
-      // kiezen via card-buttons → direct naar betalen
-      choosePackage(pkg, weeks) {
-        this.form.package  = pkg;
-        this.form.duration = weeks;
-        delete this.errors.package;
-        delete this.errors.duration;
+      packageLabel(k){
+        return k==='pakket_a'?'Basis Pakket':k==='pakket_b'?'Chasing Goals Pakket':k==='pakket_c'?'Elite Hyrox Pakket':'';
+      },
+
+      // --- STRIPE: pakket kiezen -> checkout ---
+      choosePackage(pkg, weeks){
+        // Bij key overrulen we geen UI-keuze; maar deze functie kan nog vanuit UI van andere flows aangeroepen worden.
+        if (this.hasKey) {
+          // forceer key-keuze en ga direct submitten
+          this.form.package = ak.package;
+          this.form.duration = ak.duration;
+        } else {
+          this.form.package=pkg; this.form.duration=weeks;
+        }
+        delete this.errors.package; delete this.errors.duration;
         this.submit();
       },
 
-      next() {
-        if (!this.validateStep(this.step)) return; // toont errors voor huidige stap
-        this.errors = {};                          // ↞ clear errors zodra we wél door mogen
-        if (this.step < this.totalSteps - 1) this.step++;
+      // --- VALIDATIE (per stap) ---
+      validateStep(stepIndex){
+        this.errors={}; let firstInvalidEl=null;
+
+        if (stepIndex===0){
+          if (!this.form.name?.trim()){ this.errors.name='Vul je volledige naam in.'; firstInvalidEl=firstInvalidEl||document.getElementById('name'); }
+          const email=this.form.email?.trim()||'';
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ this.errors.email='Vul een geldig e-mailadres in.'; firstInvalidEl=firstInvalidEl||document.getElementById('email'); }
+          const phoneVal=(this.form.phone||'').trim();
+          if (!phoneVal){ this.errors.phone='Vul je telefoonnummer in.'; firstInvalidEl=firstInvalidEl||document.getElementById('phone'); }
+          const dob=this.form.dob;
+          if (!dob){ this.errors.dob='Kies je geboortedatum.'; firstInvalidEl=firstInvalidEl||document.getElementById('dob'); }
+          if (!this.form.gender){ this.errors.gender='Kies je geslacht.'; }
+          if (!this.form.street?.trim()){ this.errors.street='Vul je straatnaam in.'; firstInvalidEl=firstInvalidEl||document.getElementById('street'); }
+          if (!this.form.house_number?.trim()){ this.errors.house_number='Vul je huisnummer in.'; firstInvalidEl=firstInvalidEl||document.getElementById('house_number'); }
+          const pcRaw=(this.form.postcode||'').trim().toUpperCase();
+          const pc=pcRaw.replace(/\s+/g,' ');
+          const nlRe=/^\d{4}\s?[A-Z]{2}$/, beRe=/^\d{4}$/;
+          let okPostcode=nlRe.test(pc); if(!okPostcode && beRe.test(pc)){ const num=parseInt(pc,10); okPostcode = num>=1000 && num<=9999; }
+          if (!okPostcode){ this.errors.postcode='Vul een geldige postcode in (NL: 1234 AB, BE: 1000–9999).'; firstInvalidEl=firstInvalidEl||document.getElementById('postcode'); } else { this.form.postcode=pc; }
+        }
+        if (stepIndex===1){
+          if (!['roy','eline','nicky','none'].includes(this.form.preferred_coach)) this.errors.preferred_coach='Kies je coachvoorkeur (of selecteer “Geen voorkeur”).';
+        }
+        if (stepIndex===2){
+          if (this.hasKey) {
+            // key forceert; geen validatie nodig
+          } else {
+            if (!this.form.package) this.errors.package='Kies een pakket via de knoppen.';
+            if (!this.form.duration) this.errors.duration='Kies ook de duur (12 of 24 weken).';
+          }
+        }
+        if (stepIndex===3){
+          if (this.form.height_cm==null || isNaN(this.form.height_cm) || this.form.height_cm<120 || this.form.height_cm>250) this.errors.height_cm='Lengte 120–250 cm.';
+          if (this.form.weight_kg==null || isNaN(this.form.weight_kg) || this.form.weight_kg<35 || this.form.weight_kg>250) this.errors.weight_kg='Gewicht 35–250 kg.';
+        }
+        if (stepIndex===4){ if ((this.form.injuries||'').length>500) this.errors.injuries='Maximaal 500 tekens.'; }
+        if (stepIndex===5){
+          if (!(this.form.goals||'').trim()) this.errors.goals='Beschrijf kort je doelen.';
+          else if ((this.form.goals||'').length>500) this.errors.goals='Maximaal 500 tekens.';
+        }
+        if (stepIndex===6){
+          if (this.form.max_days_per_week==null || isNaN(this.form.max_days_per_week) || this.form.max_days_per_week<1 || this.form.max_days_per_week>7) this.errors.max_days_per_week='Kies 1–7.';
+          if (this.form.session_minutes==null || isNaN(this.form.session_minutes) || this.form.session_minutes<20 || this.form.session_minutes>180) this.errors.session_minutes='Kies 20–180 min.';
+        }
+        if (stepIndex===7){ if ((this.form.sport_background||'').length>500) this.errors.sport_background='Maximaal 500 tekens.'; }
+        if (stepIndex===8){ if ((this.form.facilities||'').length>500) this.errors.facilities='Maximaal 500 tekens.'; }
+        if (stepIndex===9){ if ((this.form.materials||'').length>500) this.errors.materials='Maximaal 500 tekens.'; }
+        if (stepIndex===10){ if ((this.form.working_hours||'').length>500) this.errors.working_hours='Maximaal 500 tekens.'; }
+        if (stepIndex===11){
+          if (!this.form.goal_distance) this.errors.goal_distance='Kies een afstand.';
+          const t=(this.form.goal_time_hms||'').trim();
+          if (!/^\d{1,2}:\d{2}:\d{2}$/.test(t)) this.errors.goal_time_hms='Voer doeltijd in als HH:MM:SS.';
+          if (!this.form.goal_ref_date) this.errors.goal_ref_date='Kies de datum.';
+        }
+        if (stepIndex===12){
+          const mmssRe = /^\d{1,2}:\d{2}$/;
+          const hmsRe  = /^\d{1,2}:\d{2}:\d{2}$/;
+          if (this.form.cooper_meters==null || isNaN(this.form.cooper_meters) || this.form.cooper_meters<800 || this.form.cooper_meters>5000) {
+            this.errors.cooper_meters = 'Cooper 800–5000 m.';
+          }
+          if (!(this.form.test_5k_pace||'').trim() || !mmssRe.test(this.form.test_5k_pace)) {
+            this.errors.test_5k_pace = '5 km tijd MM:SS.';
+          }
+          if ((this.form.test_10k_pace||'').trim() && !mmssRe.test(this.form.test_10k_pace)) {
+            this.errors.test_10k_pace = '10 km tijd MM:SS.';
+          }
+          if ((this.form.marathon_pace||'').trim() && !hmsRe.test(this.form.marathon_pace)) {
+            this.errors.marathon_pace = 'Marathon tijd HH:MM:SS.';
+          }
+        }
+        if (stepIndex===13){
+          if (!this.form.hr_estimate_from_age){
+            if (this.form.hr_max_bpm==null || isNaN(this.form.hr_max_bpm) || this.form.hr_max_bpm<120 || this.form.hr_max_bpm>220) this.errors.hr_max_bpm='HF-max 120–220 of vink schatting aan.';
+          }
+          if (this.form.rest_hr_bpm!=null && (isNaN(this.form.rest_hr_bpm) || this.form.rest_hr_bpm<30 || this.form.rest_hr_bpm>100)) this.errors.rest_hr_bpm='Rust 30–100 bpm.';
+        }
+        if (stepIndex===14){
+          if (this.form.ftp_mode==='w'){
+            if (this.form.ftp_watt!=null && (isNaN(this.form.ftp_watt)||this.form.ftp_watt<80||this.form.ftp_watt>500)) this.errors.ftp_watt='FTP 80–500 W.';
+          } else {
+            if (this.form.ftp_wkg!=null && (isNaN(this.form.ftp_wkg)||this.form.ftp_wkg<1||this.form.ftp_wkg>7.5)) this.errors.ftp_wkg='FTP 1.0–7.5 W/kg.';
+          }
+        }
+
+        this.$nextTick(()=>{ const first=document.querySelector('.border-red-500'); first?.focus?.(); });
+        return Object.keys(this.errors).length===0;
       },
-      prev() {
-        if (this.step > 0) {
-          this.errors = {};    // ↞ clear errors bij teruggaan
-          this.step--;
+
+      // --- NAV ---
+      next(){
+        if (!this.validateStep(this.step)) return;
+        this.errors={};
+
+        if (this.hasKey && this.step === 1) {
+          this.submit(); // valideert stap 0+1 en triggert de FAKE branch in CheckoutController@create
+          return;        // backend redirect regelt doorgaan naar stap ≥ 3
+        }
+
+        const currentIndex = this.steps.indexOf(this.step);
+        const nextStep = this.steps[currentIndex + 1];
+
+        this.saveProgress(this.step).finally(()=>{
+          if (typeof nextStep !== 'undefined') {
+            // als nextStep 2 is en we hebben een key, sla direct door naar stap na 2
+            const target = (this.hasKey && nextStep === 2)
+              ? this.steps[currentIndex + 2]
+              : nextStep;
+            if (typeof target !== 'undefined') this.step = target;
+          }
+        });
+      },
+      prev(){ 
+        const idx = this.steps.indexOf(this.step);
+        if (idx > 0){
+          this.errors={};
+          this.step = this.steps[idx - 1];
         }
       },
 
-      // === BELANGRIJK: valideer op data, niet op DOM ===
-      validateStep(stepIndex) {
-        this.errors = {};
-        let firstInvalidEl = null;
-
-        if (stepIndex === 0) {
-          // NAAM
-          if (!this.form.name?.trim()) {
-            this.errors.name = 'Vul je volledige naam in.';
-            firstInvalidEl = firstInvalidEl || document.getElementById('name');
-          }
-
-          // EMAIL
-          const email = this.form.email?.trim() || '';
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            this.errors.email = 'Vul een geldig e-mailadres in.';
-            firstInvalidEl = firstInvalidEl || document.getElementById('email');
-          }
-
-          // TELEFOON
-          const phoneVal = (this.form.phone || '').trim();
-          if (!phoneVal) {
-            this.errors.phone = 'Vul je telefoonnummer in.';
-            firstInvalidEl = firstInvalidEl || document.getElementById('phone');
-          }
-
-          // GEBOORTEDATUM
-          const dob = this.form.dob;
-          if (!dob) {
-            this.errors.dob = 'Kies je geboortedatum.';
-            firstInvalidEl = firstInvalidEl || document.getElementById('dob');
-          } else {
-            const v = new Date(dob);
-            const today = new Date();
-            const max = today.toISOString().split('T')[0];
-            const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate());
-            const min = minDate.toISOString().split('T')[0];
-            if (Number.isNaN(v.getTime()) || dob < min || dob > max) {
-              this.errors.dob = 'Geboortedatum is ongeldig.';
-              firstInvalidEl = firstInvalidEl || document.getElementById('dob');
-            }
-          }
-
-          // GESLACHT
-          if (!this.form.gender) {
-            this.errors.gender = 'Kies je geslacht.';
-          }
-
-          // ADRES
-          if (!this.form.street?.trim()) {
-            this.errors.street = 'Vul je straatnaam in.';
-            firstInvalidEl = firstInvalidEl || document.getElementById('street');
-          }
-          if (!this.form.house_number?.trim()) {
-            this.errors.house_number = 'Vul je huisnummer in.';
-            firstInvalidEl = firstInvalidEl || document.getElementById('house_number');
-          }
-
-          // POSTCODE
-          const pcRaw = (this.form.postcode || '').trim().toUpperCase();
-          const pc = pcRaw.replace(/\s+/g, ' ');
-          const nlRe = /^\d{4}\s?[A-Z]{2}$/;
-          const beRe = /^\d{4}$/;
-          let okPostcode = nlRe.test(pc);
-          if (!okPostcode && beRe.test(pc)) {
-            const num = parseInt(pc, 10);
-            okPostcode = num >= 1000 && num <= 9999;
-          }
-          if (!okPostcode) {
-            this.errors.postcode = 'Vul een geldige postcode in (NL: 1234 AB, BE: 1000–9999).';
-            firstInvalidEl = firstInvalidEl || document.getElementById('postcode');
-          } else {
-            this.form.postcode = pc;
-          }
-        }
-
-        if (stepIndex === 1) {
-          if (!['roy','eline','nicky','none'].includes(this.form.preferred_coach)) {
-            this.errors.preferred_coach = 'Kies je coachvoorkeur (of selecteer “Geen voorkeur”).';
-          }
-        }
-        if (stepIndex === 2) {
-          if (!this.form.package)  this.errors.package  = 'Kies een pakket via de knoppen.';
-          if (!this.form.duration) this.errors.duration = 'Kies ook de duur (12 of 24 weken).';
-        }
-        if (stepIndex === 3) {
-          // LENGTE (cm)
-          if (this.form.height_cm == null || isNaN(this.form.height_cm)) {
-            this.errors.height_cm = 'Vul je lengte in (in cm).';
-          } else if (this.form.height_cm < 120 || this.form.height_cm > 250) {
-            this.errors.height_cm = 'Lengte moet tussen 120 en 250 cm liggen.';
-          }
-
-          // GEWICHT (kg)
-          if (this.form.weight_kg == null || isNaN(this.form.weight_kg)) {
-            this.errors.weight_kg = 'Vul je gewicht in (in kg).';
-          } else if (this.form.weight_kg < 35 || this.form.weight_kg > 250) {
-            this.errors.weight_kg = 'Gewicht moet tussen 35 en 250 kg liggen.';
-          }
-        }
-        if (stepIndex === 4) {
-          if ((this.form.injuries || '').length > 500) {
-            this.errors.injuries = 'Maximaal 500 tekens.';
-          }
-        }
-        if (stepIndex === 5) {
-          if (!(this.form.goals || '').trim()) {
-            this.errors.goals = 'Beschrijf kort je doelen.';
-          } else if ((this.form.goals || '').length > 500) {
-            this.errors.goals = 'Maximaal 500 tekens.';
-          }
-        }
-        if (stepIndex === 6) {
-          // Dagen per week (1–7)
-          if (this.form.max_days_per_week == null || isNaN(this.form.max_days_per_week)) {
-            this.errors.max_days_per_week = 'Vul het aantal dagen per week in.';
-          } else if (this.form.max_days_per_week < 1 || this.form.max_days_per_week > 7) {
-            this.errors.max_days_per_week = 'Kies een waarde tussen 1 en 7.';
-          }
-
-          // Duur per sessie (20–180 minuten)
-          if (this.form.session_minutes == null || isNaN(this.form.session_minutes)) {
-            this.errors.session_minutes = 'Vul de duur per sessie in (in minuten).';
-          } else if (this.form.session_minutes < 20 || this.form.session_minutes > 180) {
-            this.errors.session_minutes = 'Kies een duur tussen 20 en 180 minuten.';
-          }
-        }
-        if (stepIndex === 7) {
-          if ((this.form.sport_background || '').length > 500) {
-            this.errors.sport_background = 'Maximaal 500 tekens.';
-          }
-        }
-        if (stepIndex === 8) {
-          if ((this.form.facilities || '').length > 500) {
-            this.errors.facilities = 'Maximaal 500 tekens.';
-          }
-        }
-        if (stepIndex === 9) {
-          if ((this.form.materials || '').length > 500) {
-            this.errors.materials = 'Maximaal 500 tekens.';
-          }
-        }
-        if (stepIndex === 10) {
-          if ((this.form.working_hours || '').length > 500) {
-            this.errors.working_hours = 'Maximaal 500 tekens.';
-          }
-        }
-        if (stepIndex === 11) {
-          if (!this.form.goal_distance) {
-            this.errors.goal_distance = 'Kies een afstand.';
-          }
-          const t = (this.form.goal_time_hms || '').trim();
-          if (!/^\d{1,2}:\d{2}:\d{2}$/.test(t)) {
-            this.errors.goal_time_hms = 'Voer doeltijd in als HH:MM:SS.';
-          }
-          if (!this.form.goal_ref_date) {
-            this.errors.goal_ref_date = 'Kies de datum van je doelwedstrijd.';
-          }
-        }
-        if (stepIndex === 12) {
-          const paceRe = /^\d{1,2}:\d{2}$/; // MM:SS
-
-          // Cooper meters: VERPLICHT (800–5000)
-          if (this.form.cooper_meters == null || isNaN(this.form.cooper_meters)) {
-            this.errors.cooper_meters = 'Vul je Cooper-afstand in (in meters).';
-          } else if (this.form.cooper_meters < 800 || this.form.cooper_meters > 5000) {
-            this.errors.cooper_meters = 'Cooper-afstand moet tussen 800 en 5000 meter liggen.';
-          }
-
-          // 5 km pace: VERPLICHT (MM:SS)
-          if (!(this.form.test_5k_pace || '').trim()) {
-            this.errors.test_5k_pace = 'Vul je 5 km pace in (MM:SS).';
-          } else if (!paceRe.test(this.form.test_5k_pace)) {
-            this.errors.test_5k_pace = '5 km pace moet in het formaat MM:SS (bijv. 04:55).';
-          }
-
-          // 10 km pace: OPTIONEEL maar als ingevuld, moet geldig zijn
-          if ((this.form.test_10k_pace || '').trim() && !paceRe.test(this.form.test_10k_pace)) {
-            this.errors.test_10k_pace = '10 km pace moet in het formaat MM:SS.';
-          }
-
-          // Marathon pace: OPTIONEEL maar als ingevuld, moet geldig zijn
-          if ((this.form.marathon_pace || '').trim() && !paceRe.test(this.form.marathon_pace)) {
-            this.errors.marathon_pace = 'Marathon pace moet in het formaat MM:SS.';
-          }
-        }
-        if (stepIndex === 13) {
-          if (this.form.hr_estimate_from_age) {
-            // vul (niet vast opslaan) als placeholder — we staan lege hr_max_bpm toe bij schatting
-          } else {
-            if (this.form.hr_max_bpm == null || isNaN(this.form.hr_max_bpm) || this.form.hr_max_bpm < 120 || this.form.hr_max_bpm > 220) {
-              this.errors.hr_max_bpm = 'Vul een HF-max tussen 120 en 220 in (of vink schatting aan).';
-            }
-          }
-          if (this.form.rest_hr_bpm != null && (isNaN(this.form.rest_hr_bpm) || this.form.rest_hr_bpm < 30 || this.form.rest_hr_bpm > 100)) {
-            this.errors.rest_hr_bpm = 'Rusthartslag tussen 30 en 100 bpm.';
-          }
-        }
-        if (stepIndex === 14) {
-          if (this.form.ftp_mode === 'w') {
-            if (this.form.ftp_watt != null && (isNaN(this.form.ftp_watt) || this.form.ftp_watt < 80 || this.form.ftp_watt > 500)) {
-              this.errors.ftp_watt = 'FTP (W) tussen 80 en 500.';
-            }
-          } else if (this.form.ftp_mode === 'wkg') {
-            if (this.form.ftp_wkg != null && (isNaN(this.form.ftp_wkg) || this.form.ftp_wkg < 1.0 || this.form.ftp_wkg > 7.5)) {
-              this.errors.ftp_wkg = 'FTP (W/kg) tussen 1.0 en 7.5.';
-            }
-          }
-        }
-
-        this.$nextTick(() => { if (firstInvalidEl) firstInvalidEl.focus?.(); });
-        return Object.keys(this.errors).length === 0;
-      }, // <-- KOMMA TOEGEVOEGD
-
-      submit() {
+      // --- START CHECKOUT ---
+      submit(){
         if (this.isPaying) return;
 
-        // 1) Valideer stap 0
-        const ok0 = this.validateStep(0);
-        if (!ok0) {
-          this.step = 0;
-          this.$nextTick(() => {
-            const wrap = document.getElementById('stap-1');
-            if (wrap?.scrollIntoView) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            const first = document.querySelector(
-              '#name.border-red-500, #email.border-red-500, #phone.border-red-500, #dob.border-red-500, #street.border-red-500, #house_number.border-red-500, #postcode.border-red-500'
-            );
-            first?.focus?.();
-          });
-          return;
+        const ok0=this.validateStep(0); if(!ok0){ this.step=0; return; }
+        const ok1=this.validateStep(1); if(!ok1){ this.step=1; return; }
+        if (!this.hasKey) {
+          const ok2=this.validateStep(2); if(!ok2){ this.step=2; return; }
         }
 
-        // 2) Valideer stap 1 (coach)
-        const ok1 = this.validateStep(1);
-        if (!ok1) {
-          this.step = 1;
-          return;
-        }
+        this.isPaying=true;
 
-        // 3) Valideer stap 2 (pakket)
-        const ok2 = this.validateStep(2);
-        if (!ok2) {
-          this.step = 2;
-          return;
-        }
-
-        // 3) Alles oké → betalen
-        this.isPaying = true;
-
-        const payload = {
-          name: this.form.name,
-          email: this.form.email,
-          phone: this.form.phone,
-          dob: this.form.dob,
-          gender: this.form.gender,
-          street: this.form.street,
-          house_number: this.form.house_number,
-          postcode: this.form.postcode,
-          preferred_coach: this.form.preferred_coach,
-          package: this.form.package,
-          duration: this.form.duration,
-          height_cm: this.form.height_cm,
-          weight_kg: this.form.weight_kg,
-          injuries:  this.form.injuries,
-          goals: this.form.goals,
-          max_days_per_week: this.form.max_days_per_week,
-          session_minutes: this.form.session_minutes,
-          sport_background: this.form.sport_background,
-          facilities: this.form.facilities,
-          materials: this.form.materials,
-          working_hours: this.form.working_hours,
-          goal_distance: this.form.goal_distance,
-          goal_time_hms: this.form.goal_time_hms,
-          goal_ref_date: this.form.goal_ref_date,
-          cooper_meters: this.form.cooper_meters,
-          test_5k_pace: this.form.test_5k_pace,
-          test_10k_pace: this.form.test_10k_pace,
-          marathon_pace: this.form.marathon_pace,
-          hr_max_bpm: this.form.hr_estimate_from_age ? this.estimatedHRMax : this.form.hr_max_bpm,
-          rest_hr_bpm: this.form.rest_hr_bpm,
-          hr_estimate_from_age: this.form.hr_estimate_from_age,
-          ftp_mode: this.form.ftp_mode,
-          ftp_watt: this.form.ftp_watt,
-          ftp_wkg: (this.form.ftp_mode === 'w' ? this.computedFtpWkg : this.form.ftp_wkg),
-
+        const payload={
+          name:this.form.name, email:this.form.email, phone:this.form.phone,
+          dob:this.form.dob, gender:this.form.gender,
+          street:this.form.street, house_number:this.form.house_number, postcode:this.form.postcode,
+          preferred_coach:this.form.preferred_coach,
+          package: this.hasKey ? ak.package : this.form.package,
+          duration: this.hasKey ? ak.duration : this.form.duration,
+          height_cm:this.form.height_cm, weight_kg:this.form.weight_kg,
+          injuries:this.form.injuries, goals:this.form.goals,
+          max_days_per_week:this.form.max_days_per_week, session_minutes:this.form.session_minutes,
+          sport_background:this.form.sport_background, facilities:this.form.facilities,
+          materials:this.form.materials, working_hours:this.form.working_hours,
+          goal_distance:this.form.goal_distance, goal_time_hms:this.form.goal_time_hms, goal_ref_date:this.form.goal_ref_date,
+          cooper_meters:this.form.cooper_meters, test_5k_pace:this.form.test_5k_pace,
+          test_10k_pace:this.form.test_10k_pace, marathon_pace:this.form.marathon_pace,
+          hr_max_bpm:this.form.hr_estimate_from_age?this.estimatedHRMax:this.form.hr_max_bpm,
+          rest_hr_bpm:this.form.rest_hr_bpm, hr_estimate_from_age:this.form.hr_estimate_from_age,
+          ftp_mode:this.form.ftp_mode, ftp_watt:this.form.ftp_watt,
+          ftp_wkg:(this.form.ftp_mode==='w' ? this.computedFtpWkg : this.form.ftp_wkg),
         };
 
-        // CSRF-token veilig ophalen (kan in layout ontbreken)
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        const csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
-
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         fetch('{{ route('intake.checkout') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',            // <-- belangrijk
-            ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {})
-        },
-        credentials: 'same-origin',                // <-- voor zekerheid bij cookies/sessies
-        body: JSON.stringify(payload)
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Accept':'application/json', ...(csrf?{'X-CSRF-TOKEN':csrf}:{}) },
+          credentials:'same-origin',
+          body:JSON.stringify(payload)
         })
-        .then(async (res) => {
-        // Log detail bij fout om de exacte status/body te zien
-        if (!res.ok) {
-            const text = await res.text().catch(() => '');
-            console.error('Checkout HTTP error', res.status, text);
-            let msg = 'Kon betaalpagina niet starten.';
-            try {
-            const err = JSON.parse(text);
-            if (err?.message) msg = err.message;
-            } catch(_) {}
+        .then(async res=>{
+          if(!res.ok){ const t=await res.text().catch(()=>''), msg=(JSON.parse(t||'{}').message)||'Kon betaalpagina niet starten.'; throw new Error(msg); }
+          return res.json();
+        })
+        .then(({redirect_url})=>{
+          if(!redirect_url) throw new Error('Server gaf geen redirect_url terug.');
+          try{ sessionStorage.setItem('intakePending','1'); }catch(e){}
+          window.location.href=redirect_url;
+        })
+        .catch(e=>{
+          console.error('Checkout error:', e);
+          this.errors.general = e.message || 'Er ging iets mis bij het starten van de betaling.';
+        })
+        .finally(()=>{ this.isPaying=false; });
+      },
+
+      // --- NA BETALING: session_id bevestigen ---
+      async doConfirm(sessionId){
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        try{
+          const res = await fetch('{{ route('intake.checkout.confirm') }}', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', 'Accept':'application/json', ...(csrf?{'X-CSRF-TOKEN':csrf}:{}) },
+            credentials:'same-origin',
+            body: JSON.stringify({ session_id: sessionId })
+          });
+          if (!res.ok){
+            const t=await res.text().catch(()=>''), msg=(JSON.parse(t||'{}').message)||'Betaling kon niet bevestigd worden.';
             throw new Error(msg);
+          }
+          sessionStorage.setItem('intakeConfirmed','1');
+        } catch(err){
+          console.error('Confirm error', err);
+          this.errors.general = err.message || 'Betaling bevestigen is mislukt.';
         }
-        return res.json();
-        })
-        .then(({ redirect_url }) => {
-        if (!redirect_url) throw new Error('Server gaf geen redirect_url terug.');
-        try { sessionStorage.setItem('intakePending', '1'); } catch (e) {}
-        window.location.href = redirect_url;
-        })
-        .catch((e) => {
-        console.error('Checkout error:', e);
-        this.errors.general = e.message || 'Er ging iets mis bij het starten van de betaling.';
-        })
-        .finally(() => { this.isPaying = false; });
-        },
+      },
+
+      // --- PROGRESS SAVE (per stap) ---
+      buildProgressPayload(stepIndex){
+        const p={};
+        if (stepIndex===3){ p.height_cm=this.form.height_cm; p.weight_kg=this.form.weight_kg; }
+        if (stepIndex===4){ p.injuries=this.form.injuries; }
+        if (stepIndex===5){ p.goals=this.form.goals; }
+        if (stepIndex===6){ p.max_days_per_week=this.form.max_days_per_week; p.session_minutes=this.form.session_minutes; }
+        if (stepIndex===7){ p.sport_background=this.form.sport_background; }
+        if (stepIndex===8){ p.facilities=this.form.facilities; }
+        if (stepIndex===9){ p.materials=this.form.materials; }
+        if (stepIndex===10){ p.working_hours=this.form.working_hours; }
+        if (stepIndex===11){ p.goal_distance=this.form.goal_distance; p.goal_time_hms=this.form.goal_time_hms; p.goal_ref_date=this.form.goal_ref_date; }
+        if (stepIndex===12){ p.cooper_meters=this.form.cooper_meters; p.test_5k_pace=this.form.test_5k_pace; p.test_10k_pace=this.form.test_10k_pace; p.marathon_pace=this.form.marathon_pace; }
+        if (stepIndex===13){
+          p.hr_max_bpm = this.form.hr_estimate_from_age ? this.estimatedHRMax : this.form.hr_max_bpm;
+          p.rest_hr_bpm=this.form.rest_hr_bpm;
+        }
+        if (stepIndex===14){
+          p.ftp_mode=this.form.ftp_mode; p.ftp_watt=this.form.ftp_watt;
+          p.ftp_wkg=(this.form.ftp_mode==='w' ? this.computedFtpWkg : this.form.ftp_wkg);
+        }
+        return p;
+      },
+
+      async saveProgress(stepIndex){
+        const payload=this.buildProgressPayload(stepIndex);
+        if (Object.values(payload).every(v => v===null || v===undefined || v==='')) return Promise.resolve();
+
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        try{
+          const res = await fetch('{{ route('intake.progress') }}', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', 'Accept':'application/json', ...(csrf?{'X-CSRF-TOKEN':csrf}:{}) },
+            credentials:'same-origin',
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok){
+            const t=await res.text().catch(()=>''), msg=(JSON.parse(t||'{}').message)||'Kon voortgang niet opslaan.';
+            throw new Error(msg);
+          }
+        } catch(err){
+          console.error('Progress save error', err);
+          this.errors.general = err.message || 'Opslaan van voortgang is mislukt.';
+        }
+      },
 
       // --- intl-tel-input ---
-      initTelInput() {
-        const input = document.getElementById('phone');
-        if (!input) return;
+      initTelInput(){
+        const el=document.getElementById('phone'); if(!el) return;
+        if (el.parentElement?.classList.contains('iti') && this._iti) return;
 
-        if (input.parentElement?.classList.contains('iti') && this._iti) return;
-
-        this._iti = window.intlTelInput(input, {
-          initialCountry: "nl",
-          onlyCountries: ["nl", "be"],
-          separateDialCode: true,
-          utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js",
+        this._iti=window.intlTelInput(el,{
+          initialCountry:'nl', onlyCountries:['nl','be'], separateDialCode:true,
+          utilsScript:'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js'
         });
 
-        if (this.form.phone) { try { this._iti.setNumber(this.form.phone); } catch (e) {} }
+        // Zet beginwaarde uit model (als aanwezig)
+        if (this.form.phone){ try{ this._iti.setNumber(this.form.phone); }catch(e){} }
 
-        input.addEventListener('blur', () => {
-          if (this._iti && this._iti.isValidNumber()) {
-            this.form.phone = this._iti.getNumber();
+        const syncFromPlugin = () => {
+          if (this._iti && this._iti.isValidNumber()){
+            this.form.phone = this._iti.getNumber(); // E.164
             this.errors.phone = '';
+          } else {
+            this.form.phone = el.value; // fallback
           }
-        });
-      },
-      destroyTelInput() {
-        if (this._iti) {
-          try { this._iti.destroy(); } catch (e) {}
-          this._iti = null;
-        }
-      },
+        };
 
-      // --- Swiper binding & helpers ---
-      bindSwiper(swiper) {
-        this._swiper = swiper;
-        this.swiperReady = true;
-        this.updateSwiperEdges();
+        el.addEventListener('blur', syncFromPlugin);
+        el.addEventListener('input', () => { this.form.phone = el.value; });
+        el.addEventListener('countrychange', syncFromPlugin);
+      },
+      destroyTelInput(){ if(this._iti){ try{ this._iti.destroy(); }catch(e){} this._iti=null; } },
 
-        swiper.on('slideChange resize transitionEnd reachBeginning reachEnd fromEdge', () => {
-          this.updateSwiperEdges();
-        });
-
-        setTimeout(() => this.updateSwiperEdges(), 0);
+      // --- Swiper ---
+      bindSwiper(s){ this._swiper=s; this.swiperReady=true; this.updateSwiperEdges();
+        s.on('slideChange resize transitionEnd reachBeginning reachEnd fromEdge', ()=>this.updateSwiperEdges());
+        setTimeout(()=>this.updateSwiperEdges(),0);
       },
-      updateSwiperEdges() {
-        if (!this._swiper) return;
-        this.swiperAtStart = this._swiper.isBeginning;
-        this.swiperAtEnd   = this._swiper.isEnd;
-      },
-      swiperNext() { if (this._swiper) this._swiper.slideNext(); },
-      swiperPrev() { if (this._swiper) this._swiper.slidePrev(); },
-      destroyPackagesSwiper() {
-        if (this._swiper) { this._swiper.destroy(true, true); this._swiper = null; }
-        this.swiperReady = false;
-        this.swiperAtStart = true;
-        this.swiperAtEnd = false;
-      },
+      updateSwiperEdges(){ if(!this._swiper) return; this.swiperAtStart=this._swiper.isBeginning; this.swiperAtEnd=this._swiper.isEnd; },
+      swiperNext(){ this._swiper?.slideNext(); }, swiperPrev(){ this._swiper?.slidePrev(); },
+      destroyPackagesSwiper(){ if(this._swiper){ this._swiper.destroy(true,true); this._swiper=null; } this.swiperReady=false; this.swiperAtStart=true; this.swiperAtEnd=false; },
     }
   }
 
-  // Init Swiper wanneer stap 1 zichtbaar is en bind via event aan Alpine
-  function initPackagesSwiperAndBind() {
-    const el = document.querySelector('.packages-swiper');
-    if (!el || typeof Swiper === 'undefined') return null;
+  // Init Swiper (packages) en koppel aan Alpine via custom event
+  function initPackagesSwiperAndBind(){
+    const el=document.querySelector('.packages-swiper');
+    if (!el || typeof Swiper==='undefined') return null;
 
-    const swiper = new Swiper(el, {
-      slidesPerView: 1,
-      spaceBetween: 16,
-      grabCursor: false,
-      watchOverflow: true,
-      keyboard: { enabled: true },
-      a11y: { enabled: true },
-      observer: true,
-      observeParents: true,
-      observeSlideChildren: true,
-      breakpoints: {
-        768:  { slidesPerView: 2, spaceBetween: 20 },
-        1024: { slidesPerView: 2, spaceBetween: 24 },
+    const swiper=new Swiper(el,{
+      slidesPerView:1.1, spaceBetween:16, grabCursor:false, watchOverflow:true,
+      keyboard:{enabled:true}, a11y:{enabled:true}, observer:true, observeParents:true, observeSlideChildren:true,
+      slidesOffsetAfter:8,
+      breakpoints:{
+        768:{ slidesPerView:1.5, spaceBetween:20, slidesOffsetAfter:10 },
+        1024:{ slidesPerView:2.2, spaceBetween:24, slidesOffsetAfter:12 },
+        1280:{ slidesPerView:2.2, spaceBetween:24, slidesOffsetAfter:16 },
       },
-      on: {
-        init(s) {
-          window.dispatchEvent(new CustomEvent('packages-swiper-ready', { detail: { swiper: s } }));
-          requestAnimationFrame(() => { s.update(); });
-        }
-      }
+      on:{ init(s){ window.dispatchEvent(new CustomEvent('packages-swiper-ready',{ detail:{swiper:s} })); requestAnimationFrame(()=>s.update()); } }
     });
 
-    if (!swiper.initialized && typeof swiper.init === 'function') swiper.init();
+    if (!swiper.initialized && typeof swiper.init==='function') swiper.init();
     return swiper;
   }
 </script>
-
 @endsection
