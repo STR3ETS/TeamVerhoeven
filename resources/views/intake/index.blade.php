@@ -56,7 +56,7 @@
 
   <h2 class="text-xl font-bold mb-2">Intakeformulier</h2>
   <p class="text-sm font-medium text-black/60 mb-8">
-    Goed om je te zien en welkom bij 2BeFit Coaching X Team Verhoeven<br>
+    Goed om je te zien en welkom bij 2BeFit Coaching X Team Verhoeven<br class="hidden md:block">
     Laten we even je persoonlijke profiel samenstellen. Op basis hiervan worden de trainingen samengesteld.
   </p>
   @if(!empty($ak))
@@ -92,8 +92,8 @@
           </div>
 
           <!-- E-mail + Telefoon -->
-          <div class="flex gap-4">
-            <div class="w-3/5 min-w-0">
+          <div class="flex flex-col md:flex-row gap-4">
+            <div class="w-full md:w-3/5 min-w-0">
               <p class="text-sm font-medium text-black mb-1">Wat is je emailadres?</p>
               <input id="email" type="email" name="email" x-model="form.email" required
                      class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
@@ -101,7 +101,7 @@
                      :class="errors.email ? 'border-red-500 focus:border-red-500' : ''">
             </div>
 
-            <div class="w-2/5 min-w-0">
+            <div class="w-full md:w-2/5 min-w-0">
               <p class="text-sm font-medium text-black mb-1">Wat is je telefoonnummer?</p>
               <div class="w-full">
                 <input id="phone" type="tel" name="phone" required
@@ -125,20 +125,20 @@
           <!-- Adres -->
           <div>
             <p class="text-sm font-medium text-black mb-2">Wat is je adres?</p>
-            <div class="flex gap-4">
+            <div class="flex flex-col md:flex-row gap-4">
               <div class="flex-1 min-w-0">
                 <input id="street" type="text" name="street" x-model="form.street" placeholder="Straatnaam"
                        class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
                               border-gray-300 hover:border-[#c7c7c7]"
                        :class="errors.street ? 'border-red-500 focus:border-red-500' : ''">
               </div>
-              <div class="w-34 min-w-0">
+              <div class="w-full md:w-34 min-w-0">
                 <input id="house_number" type="text" name="house_number" x-model="form.house_number" placeholder="Nr."
                        class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
                               border-gray-300 hover:border-[#c7c7c7]"
                        :class="errors.house_number ? 'border-red-500 focus:border-red-500' : ''">
               </div>
-              <div class="w-44 min-w-0">
+              <div class="w-full md:w-44 min-w-0">
                 <input id="postcode" type="text" name="postcode" x-model="form.postcode" placeholder="Postcode"
                        class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
                               border-gray-300 hover:border-[#c7c7c7]"
@@ -201,7 +201,7 @@
       <div>
         <h3 class="text-md font-semibold mb-4">Welke coach heeft je voorkeur?</h3>
 
-        <div class="grid grid-cols-4 gap-3 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <label class="p-3 rounded-xl border border-gray-300 cursor-pointer hover:bg-gray-50 transition duration-300">
             <img src="/assets/nicky.webp" alt="Nicky" class="mb-4">
             <div class="flex items-center gap-3 ">
@@ -262,15 +262,27 @@
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-md font-semibold">Kies je pakket</h3>
 
-          <!-- Adaptieve navigatieknop -->
-          <button type="button"
-                  class="w-8 h-8 cursor-pointer rounded-lg border border-gray-300 text-sm hover:bg-gray-50 transition flex items-center justify-between"
-                  x-show="swiperReady && (swiperAtStart || swiperAtEnd)"
-                  x-transition
-                  @click="swiperAtStart ? swiperNext() : swiperPrev()">
-            <i x-show="swiperAtStart" class="fa-solid fa-right-long fa-sm pl-2.25 opacity-25"></i>
-            <i x-show="swiperAtEnd" class="fa-solid fa-right-long fa-sm pr-2 opacity-25 fa-flip-horizontal"></i>
-          </button>
+          <div class="flex items-center gap-2">
+            <!-- Prev -->
+            <button type="button"
+                    class="w-8 h-8 rounded-lg border border-gray-300 text-sm transition flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                    x-show="swiperReady"
+                    :disabled="swiperAtStart"
+                    @click="swiperPrev()"
+                    aria-label="Vorige">
+              <i class="fa-solid fa-right-long fa-sm fa-flip-horizontal"></i>
+            </button>
+
+            <!-- Next -->
+            <button type="button"
+                    class="w-8 h-8 rounded-lg border border-gray-300 text-sm transition flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                    x-show="swiperReady"
+                    :disabled="swiperAtEnd"
+                    @click="swiperNext()"
+                    aria-label="Volgende">
+              <i class="fa-solid fa-right-long fa-sm"></i>
+            </button>
+          </div>
         </div>
 
         <div class="relative mb-6">
@@ -470,8 +482,6 @@
               @endforeach
             </div>
           </div>
-          <div class="pointer-events-none absolute z-999 right-0 top-0 h-full w-10 md:w-16
-            bg-gradient-to-l from-white to-transparent"></div>
         </div>
 
         <div class="flex items-center justify-between gap-2">
@@ -486,8 +496,8 @@
       <div>
         <h3 class="text-md font-semibold mb-4">Lengte & Gewicht</h3>
         <div class="flex flex-col gap-4 mb-8">
-          <div class="flex items-center gap-4">
-            <div class="w-1/2">
+          <div class="flex flex-col md:flex-row md:items-center gap-4">
+            <div class="w-full md:w-1/2">
               <p class="text-sm font-medium text-black mb-1">Wat is je lengte (in cm)?</p>
               <div class="relative">
                 <input
@@ -505,7 +515,7 @@
               </div>
             </div>
 
-            <div class="w-1/2">
+            <div class="w-full md:w-1/2">
               <p class="text-sm font-medium text-black mb-1">Wat is je gewicht (in kg)?</p>
               <div class="relative">
                 <input
@@ -604,9 +614,9 @@
         <h3 class="text-md font-semibold mb-4">Sessies & Duur</h3>
 
         <div class="flex flex-col gap-4 mb-8">
-          <div class="flex items-center gap-4">
+          <div class="flex flex-col md:flex-row md:items-center gap-4">
             <!-- Dagen per week -->
-            <div class="w-1/2">
+            <div class="w-full md:w-1/2">
               <p class="text-sm font-medium text-black mb-1">Hoeveel dagen per week wil je maximaal?</p>
               <div class="relative">
                 <input
@@ -625,7 +635,7 @@
             </div>
 
             <!-- Duur per sessie (minuten) -->
-            <div class="w-1/2">
+            <div class="w-full md:w-1/2">
               <p class="text-sm font-medium text-black mb-1">Hoelang wil je trainen per sessie?</p>
               <div class="relative">
                 <input
@@ -1225,6 +1235,18 @@
         history.replaceState(null,'', clean);
       },
 
+      finalizeIntake(){
+        try{
+          localStorage.removeItem('intakeWizard_v1');
+          sessionStorage.removeItem('intakePending');
+          sessionStorage.removeItem('intakeConfirmed');
+        }catch(e){}
+
+        const url = new URL('{{ url('/login') }}', window.location.origin);
+        url.searchParams.set('intake', 'ok'); // 👈 succesvlag meegeven
+        window.location.assign(url.toString());
+      },
+
       packageLabel(k){
         return k==='pakket_a'?'Basis Pakket':k==='pakket_b'?'Chasing Goals Pakket':k==='pakket_c'?'Elite Hyrox Pakket':'';
       },
@@ -1337,6 +1359,12 @@
         if (!this.validateStep(this.step)) return;
         this.errors={};
 
+        const isLast = this.steps.indexOf(this.step) === this.steps.length - 1;
+        if (isLast){
+          this.saveProgress(this.step).finally(()=> this.finalizeIntake());
+          return;
+        }
+
         if (this.hasKey && this.step === 1) {
           this.submit(); // valideert stap 0+1 en triggert de FAKE branch in CheckoutController@create
           return;        // backend redirect regelt doorgaan naar stap ≥ 3
@@ -1404,13 +1432,30 @@
           body:JSON.stringify(payload)
         })
         .then(async res=>{
-          if(!res.ok){ const t=await res.text().catch(()=>''), msg=(JSON.parse(t||'{}').message)||'Kon betaalpagina niet starten.'; throw new Error(msg); }
+          if(!res.ok){
+            const t = await res.text().catch(()=>''), msg = (JSON.parse(t||'{}').message) || 'Kon betaalpagina niet starten.';
+            throw new Error(msg);
+          }
           return res.json();
         })
-        .then(({redirect_url})=>{
-          if(!redirect_url) throw new Error('Server gaf geen redirect_url terug.');
-          try{ sessionStorage.setItem('intakePending','1'); }catch(e){}
-          window.location.href=redirect_url;
+        .then((payload)=>{
+          const redirect_url = payload?.redirect_url;
+          const redirect_to_login = payload?.redirect_to_login; // optioneel, mocht je dat in je controller meegeven
+
+          if (redirect_url) {
+            // Stripe-checkout pad
+            try{ sessionStorage.setItem('intakePending','1'); }catch(e){}
+            window.location.href = redirect_url;
+            return;
+          }
+
+          // Geen redirect_url → intake is klaar (bijv. key/ak-flow zonder betaling)
+          if (redirect_to_login || this.hasKey || payload?.ok === true) {
+            this.finalizeIntake();
+            return;
+          }
+
+          throw new Error('Onverwachte serverrespons bij intake.');
         })
         .catch(e=>{
           console.error('Checkout error:', e);
@@ -1430,10 +1475,13 @@
             body: JSON.stringify({ session_id: sessionId })
           });
           if (!res.ok){
-            const t=await res.text().catch(()=>''), msg=(JSON.parse(t||'{}').message)||'Betaling kon niet bevestigd worden.';
+            const t = await res.text().catch(()=>''), msg = (JSON.parse(t||'{}').message) || 'Betaling kon niet bevestigd worden.';
             throw new Error(msg);
           }
           sessionStorage.setItem('intakeConfirmed','1');
+
+          // ✅ Intake is succesvol afgerond → opruimen + naar /login
+          this.finalizeIntake();
         } catch(err){
           console.error('Confirm error', err);
           this.errors.general = err.message || 'Betaling bevestigen is mislukt.';

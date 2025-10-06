@@ -32,9 +32,14 @@
   @endphp
 
   <div class="{{ $cardClass }}">
+    @if (request()->get('intake') === 'ok' && !$verifying)
+      <div class="rounded-xl border mb-4 border-green-200 bg-green-50 text-green-700 p-3 text-xs">
+        <strong>Intake succesvol afgerond</strong> 🎉<br>Je kunt nu inloggen met je e-mailadres.
+      </div>
+    @endif
     {{-- Status / errors --}}
     @if (session('status'))
-      <div class="mb-4 rounded-xl border border-green-200 bg-green-50 text-green-700 p-3 text-sm">
+      <div class="mb-4 rounded-xl border border-green-200 bg-green-50 text-green-700 p-3 text-xs">
         {{ session('status') }}
       </div>
     @endif
@@ -63,12 +68,17 @@
       </div>
 
       @unless($verifying)
-        <div class="flex items-center justify-between gap-2">
-          <a href="{{ url('/') }}" class="{{ $btnGhost }}">Terug naar home</a>
-          <button type="submit" class="{{ $btnPrimary }}">Verstuur code naar mijn e-mailadres</button>
+        <div class="pt-2 md:pt-0 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-2">
+          <a href="{{ url('/') }}" class="hidden md:block {{ $btnGhost }}">Terug naar home</a>
+          <button type="submit" class="w-full md:w-fit {{ $btnPrimary }}">Verstuur code naar mijn e-mailadres</button>
+          <a href="{{ url('/') }}" class="block md:hidden {{ $btnGhost }}">Terug naar home</a>
         </div>
       @endunless
     </form>
+
+    <!-- <div class="rounded-xl border border-orange-200 bg-orange-50 text-orange-700 p-3 text-xs">
+      <strong>We zijn bijna zover!</strong> 🎉<br>Binnenkort kun jij hier inloggen in jouw persoonlijke coaching platform.<br><br><a href="/">Klik <span class="underline">hier</span> om terug te keren naar home</a>
+    </div> -->
 
     {{-- Formulier 2: inloggen met code — alleen in verify-mode --}}
     @if ($verifying)

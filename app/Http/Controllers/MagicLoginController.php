@@ -30,7 +30,7 @@ class MagicLoginController extends Controller
 
         // Altijd generiek antwoord → geen user enumeration
         $generic = back()
-            ->with('status', 'Als je e-mailadres bij ons bekend is, hebben we een inlogcode verstuurd. Check de laravel.log.')
+            ->with('status', 'We hebben je inlogcode verstuurd naar het opgegeven e-mailadres.')
             ->withInput(['email' => $email]);
 
         if (!$user) {
