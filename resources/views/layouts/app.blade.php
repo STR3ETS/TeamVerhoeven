@@ -32,13 +32,118 @@
             body {
                 font-family: 'Inter', sans-serif;
             }
+
+            #mobile-menu {
+                transition: 0.3s ease-in-out;
+                transform: translateX(-100%);
+            }
+            #mobile-menu.active {
+                transform: translateY(0%);
+            }
         </style>
         <meta name="csrf-token" content="{{ csrf_token() }}">
     </head>
-    <body class="bg-[#faf5f2] min-h-screen max-h-screen flex">
-        <div class="w-fit h-screen bg-[#c8ab7a] p-4">
-            <ul>
-                <li class="mb-6">
+    <body class="bg-[#faf5f2] min-h-screen max-h-screen flex flex-col md:flex-row">
+        <div id="mobile-menu" class="md:hidden w-full h-screen fixed z-[999] top-0 left-0 bg-[#c8ab7a] p-4">
+            <ul class="w-full flex items-center justify-between mb-8">
+                <li>
+                    <img class="max-w-[5rem]" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
+                </li>
+                <li id="mobile-menu-close">
+                    <i class="fa-solid fa-xmark text-white text-xl"></i>
+                </li>
+            </ul>
+            <ul class="flex flex-col gap-4">
+                <!-- NIET INGELOGT -->
+                @guest
+                    <li>
+                        <a href="{{ url('/login') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
+                            <span class="text-black font-semibold text-xs pt-0.5">Inloggen</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url('/intake') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <i class="min-w-4 fa-solid fa-bolt fa-xs text-black"></i>
+                            <span class="text-black font-semibold text-xs pt-0.5">Intakeformulier</span>
+                        </a>
+                    </li>
+                @endguest
+                <!-- INGELOGT ALS COACH/KLANT -->
+                @auth
+                    <!-- INGELOGT ALS COACH -->
+                    @if(auth()->user()->role === 'coach')
+                        <li>
+                            <a href="{{ url('/coach') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Overzicht</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-ban fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Ongeclaimde klanten</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Chat met je klant</span>
+                            </a>
+                        </li>
+                    @endif
+                    <!-- INGELOGT ALS KLANT -->
+                    @if(auth()->user()->role === 'client')
+                        <li>
+                            <a href="{{ url('/client') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-house fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Overzicht</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-clipboard-user fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Weekplanning</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Chat met je coach</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                <i class="min-w-4 fa-solid fa-shopping-bag fa-xs text-black"></i>
+                                <span class="text-black font-semibold text-xs pt-0.5">Supplementen</span>
+                            </a>
+                        </li>
+                    @endif
+                    <li>
+                        <a href="{{ route('logout') }}"
+                            onclick="event.preventDefault(); this.nextElementSibling.submit();"
+                            class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <i class="min-w-4 fa-solid fa-right-from-bracket fa-xs text-black"></i>
+                            <span class="text-black font-semibold text-xs pt-0.5">Uitloggen</span>
+                        </a>
+                        <form method="POST" action="{{ route('logout') }}" class="hidden">
+                            @csrf
+                        </form>
+                    </li>
+                @endauth
+            </ul>
+        </div>
+        <div class="w-full md:w-fit md:h-screen bg-[#c8ab7a] p-4 md:min-w-[200px]">
+            <ul class="flex md:hidden items-center justify-between">
+                <li>
+                    <img class="max-w-[5rem]" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
+                </li>
+                <li id="mobile-menu-open">
+                    <i class="fa-solid fa-bars text-white text-xl"></i>
+                </li>
+            </ul>
+            <ul class="hidden md:block">
+                <li class="md:mb-6">
                     <img class="max-w-[7rem]" src="/assets/logo-2befit-teamverhoeven.webp" alt="Logo">
                 </li>
                 <!-- NIET INGELOGT -->
@@ -120,10 +225,19 @@
                 @endauth
             </ul>
         </div>
-        <div class="flex-1 min-h-screen max-h-screen overflow-y-auto">
+        <div class="flex-1 md:min-h-screen md:max-h-screen md:overflow-y-auto">
             <div class="max-w-6xl mx-auto px-8 py-12">
                 @yield('content')
             </div>
         </div>
+        <script>
+            const mobileMenu = document.getElementById('mobile-menu');
+            document.getElementById('mobile-menu-open').addEventListener('click', function() {
+                mobileMenu.classList.add('active');
+            });
+            document.getElementById('mobile-menu-close').addEventListener('click', function() {
+                mobileMenu.classList.remove('active');
+            });
+        </script>
     </body>
 </html>
