@@ -83,6 +83,60 @@ class CoachClientController extends Controller
         ));
     }
 
+    public function intake(User $client, Request $request)
+    {
+        $coach   = $request->user();
+        $profile = ClientProfile::where('user_id', $client->id)->first();
+
+        if ($profile && $profile->coach_id && (int) $profile->coach_id !== (int) $coach->id) {
+            abort(403);
+        }
+
+        // Basisgegevens
+        $birthdate = $profile?->birthdate; // Carbon (via $casts)
+        $ageYears  = $birthdate ? $birthdate->age : null;
+
+        // JSON-achtige velden robuust parsen
+        $parseJson = function ($value, $fallback = []) {
+            if (is_array($value)) return $value;
+            if (is_string($value) && trim($value) !== '') {
+                $dec = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) {
+                    return $dec;
+                }
+            }
+            return $fallback;
+        };
+
+        $address     = $parseJson($profile?->address, []);
+        $heartrate   = $parseJson($profile?->heartrate, []);
+        $test12min   = $parseJson($profile?->test_12min, []);
+        $injuries    = $parseJson($profile?->injuries, []);       // voorbeeld: vrije velden
+        $preferences = $parseJson($profile?->preferences, []);    // voorbeeld: vrije velden
+
+        // Afgeleiden: hr_max / hr_rest uit heartrate of losse kolommen indien aanwezig
+        $hrMax  = $heartrate['max']      ?? $heartrate['hr_max']  ?? ($profile->hr_max_bpm  ?? null);
+        $hrRest = $heartrate['resting']  ?? $heartrate['rest']    ?? $heartrate['hr_rest'] ?? ($profile->rest_hr_bpm ?? null);
+
+        // Cooper afstand (meters)
+        $cooperMeters = isset($test12min['meters']) ? (int) $test12min['meters'] : null;
+
+        return view('coach.clients.intake', compact(
+            'client',
+            'profile',
+            'birthdate',
+            'ageYears',
+            'address',
+            'heartrate',
+            'test12min',
+            'injuries',
+            'preferences',
+            'hrMax',
+            'hrRest',
+            'cooperMeters'
+        ));
+    }
+
     public function claim(Request $request)
     {
         $q = trim($request->input('q', ''));
