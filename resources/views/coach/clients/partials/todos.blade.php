@@ -9,15 +9,13 @@
     $done   = $todos->whereNotNull('completed_at');
 @endphp
 
-<div class="{{ $card }}">
-  <h2 class="text-sm text-black font-semibold opacity-50 mb-2">To-do’s voor {{ $client->name }}</h2>
-
+<div class="{{ $card }} mb-6">
   {{-- Add form --}}
   <form method="POST" action="{{ route('coach.clients.todos.store', $client) }}" class="mb-4">
     @csrf
     <div class="flex flex-col sm:flex-row gap-2">
       <input name="label" required maxlength="200" placeholder="Nieuwe taak..."
-             class="w-full sm:w-96 rounded-xl border border-gray-300 hover:border-[#c7c7c7] transition p-3 text-sm focus:outline-none focus:ring-0">
+             class="w-full rounded-xl border border-gray-300 hover:border-[#c7c7c7] transition p-3 text-sm focus:outline-none focus:ring-0">
       <button class="px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
         Toevoegen
       </button>
@@ -27,33 +25,33 @@
 
   {{-- Open items --}}
   <div class="space-y-2" x-data="todoList('{{ route('coach.clients.todos.reorder', $client) }}')">
-    <h3 class="text-sm font-semibold text-gray-700">Open</h3>
+    <h3 class="text-sm text-black font-semibold opacity-50 mb-2">Taken te voltooien</h3>
 
     <ul class="divide-y divide-gray-100" x-ref="list" data-sortable="true">
       @forelse ($open as $item)
-        <li class="py-2 flex items-start gap-3" data-id="{{ $item->id }}">
+        <li class="py-3 flex items-start gap-4" data-id="{{ $item->id }}">
           <form method="POST" action="{{ route('coach.clients.todos.toggle', [$client, $item]) }}">
             @csrf @method('PATCH')
-            <button class="mt-0.5 w-5 h-5 border rounded flex items-center justify-center hover:bg-gray-50"
+            <button class="cursor-pointer mt-0.5 w-5 h-5 border border-gray-400 rounded flex items-center justify-center hover:bg-gray-50"
                     title="Afvinken">
               <span class="sr-only">Toggle</span>
-              ✓
+              <i class="fa-solid fa-check fa-xs text-gray-400"></i>
             </button>
           </form>
 
           <div class="flex-1">
-            <div class="text-sm text-black">{{ $item->label }}</div>
+            <div class="text-sm text-black font-semibold">{{ $item->label }}</div>
             <div class="text-xs text-gray-500">
-              @if($item->source === 'system') Systeemtaak @else Handmatig @endif
-              @if($item->package) • {{ $item->package }}@endif
-              @if($item->duration_weeks) • {{ $item->duration_weeks }} weken @endif
+              @if($item->source === 'system') Taak vanuit pakket @else Taak handmatig toegevoegd @endif
             </div>
           </div>
 
           <form method="POST" action="{{ route('coach.clients.todos.destroy', [$client, $item]) }}"
                 onsubmit="return confirm('Taak verwijderen?')">
             @csrf @method('DELETE')
-            <button class="text-xs text-gray-500 hover:text-red-600 font-semibold">Verwijder</button>
+            <button class="text-xs text-red-500 font-semibold cursor-pointer">
+              Taak verwijderen <i class="ml-2 fa-solid fa-trash-can"></i>
+            </button>
           </form>
         </li>
       @empty
@@ -62,21 +60,21 @@
     </ul>
 
     {{-- Done items --}}
-    <h3 class="mt-4 text-sm font-semibold text-gray-700">Afgevinkt</h3>
-    <ul class="divide-y divide-gray-100 opacity-70">
+    <h3 class="mt-4 text-sm text-black font-semibold opacity-50 mb-2">Taken afgevinkt</h3>
+    <ul class="divide-y divide-gray-100">
       @forelse ($done as $item)
-        <li class="py-2 flex items-start gap-3">
+        <li class="py-3 flex items-start gap-3">
           <form method="POST" action="{{ route('coach.clients.todos.toggle', [$client, $item]) }}">
             @csrf @method('PATCH')
-            <button class="mt-0.5 w-5 h-5 border rounded flex items-center justify-center bg-gray-100 hover:bg-gray-50"
+            <button class="cursor-pointer mt-0.5 w-5 h-5 border border-green-500 rounded flex items-center justify-center bg-green-100 hover:bg-green-50"
                     title="Markeer als open">
               <span class="sr-only">Toggle</span>
-              ✓
+              <i class="fa-solid fa-check fa-xs text-green-500"></i>
             </button>
           </form>
 
           <div class="flex-1">
-            <div class="text-sm text-black line-through">{{ $item->label }}</div>
+            <div class="text-sm text-black line-through font-semibold">{{ $item->label }}</div>
             <div class="text-xs text-gray-500">
               Afgevinkt op {{ optional($item->completed_at)->format('d-m-Y H:i') ?? '—' }}
             </div>
@@ -85,7 +83,9 @@
           <form method="POST" action="{{ route('coach.clients.todos.destroy', [$client, $item]) }}"
                 onsubmit="return confirm('Taak verwijderen?')">
             @csrf @method('DELETE')
-            <button class="text-xs text-gray-500 hover:text-red-600 font-semibold">Verwijder</button>
+            <button class="text-xs text-red-500 font-semibold">
+              Taak verwijderen <i class="ml-2 fa-solid fa-trash-can"></i>
+            </button>
           </form>
         </li>
       @empty

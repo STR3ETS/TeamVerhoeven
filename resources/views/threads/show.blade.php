@@ -22,10 +22,10 @@
 
 <div class="flex flex-col md:flex-row gap-4">
     @if($role === 'client')
-        <div class="min-w-[250px] max-w-[250px] h-fit p-6 bg-white rounded-3xl md:mt-[6.5rem]">
+        <div class="min-w-[250px] max-w-[250px] h-fit p-5 bg-white rounded-3xl border border-gray-300 md:mt-[6.5rem]">
             @if($coachUser)
                 <div class="flex items-center gap-2">
-                    <div class="w-10 h-10 rounded-full bg-black bg-cover bg-center relative"
+                    <div class="w-10 h-10 rounded-full bg-black bg-cover bg-top relative"
                          style="background-image:url('{{ $coachAvatar }}')">
                         <div class="w-3 h-3 bg-green-500 animate-ping rounded-full absolute left-0 top-0"></div>
                         <div class="w-3 h-3 bg-green-500 rounded-full absolute left-0 top-0"></div>
@@ -54,7 +54,7 @@
             {{ $thread->subject ?? 'Zonder onderwerp' }}
         </h1>
 
-        <div class="w-full p-6 bg-white rounded-3xl min-h-[400px]">
+        <div class="w-full p-5 bg-white rounded-3xl border border-gray-300 min-h-[400px]">
             @if($thread->messages->isEmpty())
                 <p class="text-sm text-gray-500">Nog geen berichten in dit gesprek.</p>
             @else
@@ -88,11 +88,9 @@
                 @csrf
                 <textarea
                     name="body" rows="3"
-                    class="w-full rounded-xl border-[#ededed] hover:border-[#c7c7c7] transition duration-300
-                           p-3 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0
-                           focus:border-[#c8ab7a] text-sm"
+                    class="p-5 bg-white rounded-3xl border border-gray-300 hover:border-[#c8ab7a] focus:border-[#c8ab7a] outline-none transition duration-300 w-full text-sm"
                     placeholder="Typ je bericht..."></textarea>
-                <button class="mt-4 px-6 py-3 bg-[#c8ab7a] text-white font-medium text-sm rounded">
+                <button class="cursor-pointer hover:bg-[#a38b62] transition duration-300 mt-4 px-6 py-3 bg-[#c8ab7a] text-white font-medium text-sm rounded">
                     Versturen
                 </button>
             </form>
