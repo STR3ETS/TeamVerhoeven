@@ -26,6 +26,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/threads/{thread}/msg',   [CoachThreadController::class, 'storeMessage'])->name('threads.messages.store');
         Route::get('/clients',                 [CoachClientController::class, 'index'])->name('clients.index');
         Route::get('/clients/{client}',        [CoachClientController::class, 'show'])->name('clients.show');
+        Route::get('/claim-clients', [CoachClientController::class, 'claim'])
+            ->name('clients.claim');
+        Route::post('/claim-clients/{profile}', [CoachClientController::class, 'claimStore'])
+            ->name('clients.claim.store');
     });
     Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
         Route::get('/', fn () => view('client.index'))->name('index');

@@ -80,7 +80,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <a href="{{ route('coach.clients.claim') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-ban fa-xs text-black"></i>
                                 <span class="text-black font-semibold text-xs pt-0.5">Ongeclaimde klanten</span>
                             </a>
@@ -178,7 +178,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <a href="{{ route('coach.clients.claim') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-ban fa-xs text-black"></i>
                                 <span class="text-black font-semibold text-xs pt-0.5">Ongeclaimde klanten</span>
                             </a>

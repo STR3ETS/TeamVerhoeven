@@ -82,4 +82,48 @@ class CoachClientController extends Controller
             'uhvData'
         ));
     }
+
+    public function claim(Request $request)
+    {
+        $q = trim($request->input('q', ''));
+
+        $profiles = ClientProfile::query()
+            ->whereNull('coach_id')
+            ->whereHas('user', function ($q2) {
+                $q2->where('role', 'client'); // alleen klanten
+            })
+            ->when($q !== '', function ($query) use ($q) {
+                // zoeken op naam / e-mail van de gekoppelde user
+                $query->whereHas('user', function ($u) use ($q) {
+                    $u->where('name', 'like', "%{$q}%")
+                      ->orWhere('email', 'like', "%{$q}%");
+                });
+            })
+            ->with(['user:id,name,email']) // eager load zodat we in de view $profile->user->... kunnen gebruiken
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('coach.clients.claim', [
+            'profiles' => $profiles,
+            'q'        => $q,
+        ]);
+    }
+
+    public function claimStore(Request $request, ClientProfile $profile)
+    {
+        $updated = ClientProfile::query()
+            ->where('id', $profile->id)
+            ->whereNull('coach_id')
+            ->update([
+                'coach_id'   => $request->user()->id,
+                'updated_at' => now(),
+            ]);
+
+        if (! $updated) {
+            return back()->with('error', 'Deze klant is al geclaimd door een andere coach.');
+        }
+
+        return back()->with('success', 'Klant succesvol aan jou toegewezen.');
+    }
 }
