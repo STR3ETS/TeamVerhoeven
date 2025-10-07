@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title','Threads')
+@section('title','Berichten')
 
 @section('content')
 @if($role === 'coach')
