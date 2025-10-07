@@ -779,37 +779,66 @@ class CheckoutController extends Controller
     private function seedDefaultTodosForClient(int $clientUserId, string $package, int $durationWeeks): void
     {
         $defs = [];
-        $pos  = 10; // beginpositie (ruimte laten voor handmatige items)
+        $pos  = 10; // beginpositie
 
-        // pakket B/C delen
+        // pakket B en C delen
         if (in_array($package, ['pakket_b','pakket_c'], true)) {
-            $defs[] = ['label' => '30 min call met coach', 'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
+            $defs[] = [
+                'label'    => '30 min call met coach',
+                'optional' => false,
+                'notes'    => null,
+                'pos'      => $pos,
+            ]; $pos += 10;
 
             if ($package === 'pakket_b') {
                 if ($durationWeeks === 24) {
-                    // keuze: coach kiest er 1 → beide als optioneel, met notitie "kies één"
-                    $defs[] = ['label' => '1x 2Befit supplement', 'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
-                    $defs[] = ['label' => '1x voedingsplan',       'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
+                    // KEUZE → 1 item
+                    $defs[] = [
+                        'label'    => 'Kies: 1x 2Befit supplement of 1x voedingsplan',
+                        'optional' => true,
+                        'notes'    => 'Maak één keuze en vink af wanneer geleverd.',
+                        'pos'      => $pos,
+                    ]; $pos += 10;
                 }
             }
 
             if ($package === 'pakket_c') {
                 if ($durationWeeks === 12) {
-                    // keuze: 1 van de 2
-                    $defs[] = ['label' => '1x 2Befit supplement', 'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
-                    $defs[] = ['label' => '1x voedingsplan',       'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
+                    // KEUZE → 1 item
+                    $defs[] = [
+                        'label'    => 'Kies: 1x 2Befit supplement of 1x voedingsplan',
+                        'optional' => true,
+                        'notes'    => 'Maak één keuze en vink af wanneer geleverd.',
+                        'pos'      => $pos,
+                    ]; $pos += 10;
                 } elseif ($durationWeeks === 24) {
-                    // beide
-                    $defs[] = ['label' => '1x 2Befit supplement', 'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
-                    $defs[] = ['label' => '1x voedingsplan',       'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
+                    // beide → 2 items
+                    $defs[] = [
+                        'label'    => '1x 2Befit supplement',
+                        'optional' => false,
+                        'notes'    => null,
+                        'pos'      => $pos,
+                    ]; $pos += 10;
+                    $defs[] = [
+                        'label'    => '1x voedingsplan',
+                        'optional' => false,
+                        'notes'    => null,
+                        'pos'      => $pos,
+                    ]; $pos += 10;
                 }
-                // t-shirt bij pakket C (altijd)
-                $defs[] = ['label' => 'Gratis 2Befit workout t-shirt', 'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
+
+                // altijd t-shirt bij pakket C
+                $defs[] = [
+                    'label'    => 'Gratis 2Befit workout t-shirt',
+                    'optional' => false,
+                    'notes'    => null,
+                    'pos'      => $pos,
+                ]; $pos += 10;
             }
         }
 
         if (empty($defs)) {
-            return; // pakket A of geen regels → niets aanmaken
+            return; // pakket A → niets
         }
 
         foreach ($defs as $d) {
