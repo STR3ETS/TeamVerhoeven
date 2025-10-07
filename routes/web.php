@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ClientThreadController;
 use App\Http\Controllers\CoachClientController;
+use App\Http\Controllers\CoachClientTodoController;
 use App\Http\Controllers\CoachThreadController;
 use App\Http\Controllers\MagicLoginController;
 use Illuminate\Http\Request;
@@ -31,6 +32,13 @@ Route::middleware(['auth'])->group(function () {
             ->name('clients.claim');
         Route::post('/claim-clients/{profile}', [CoachClientController::class, 'claimStore'])
             ->name('clients.claim.store');
+
+        Route::prefix('clients/{client}/todos')->name('clients.todos.')->group(function () {
+            Route::post('/',            [CoachClientTodoController::class, 'store'])->name('store');           // taak toevoegen
+            Route::patch('/{todo}/toggle', [CoachClientTodoController::class, 'toggle'])->name('toggle');     // afvinken/undo
+            Route::delete('/{todo}',    [CoachClientTodoController::class, 'destroy'])->name('destroy');       // verwijderen
+            Route::patch('/reorder',    [CoachClientTodoController::class, 'reorder'])->name('reorder');       // sorteren
+        });
     });
     Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
         Route::get('/', fn () => view('client.index'))->name('index');

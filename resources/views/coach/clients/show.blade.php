@@ -6,6 +6,7 @@
   $card  = 'p-5 bg-white rounded-3xl border border-gray-300';
   $muted = 'text-gray-500';
 @endphp
+@include('coach.clients.partials.todos', ['client' => $client])
   <a href="{{ route('coach.clients.index') }}" class="text-xs text-black font-semibold opacity-50 hover:opacity-100 transition duration-300"><i class="fa-solid fa-arrow-right-long fa-flip-horizontal fa-sm mr-2"></i> Terug naar overzicht</a>
   <h1 class="text-2xl font-bold mb-2 mt-1">Gegevens van {{ $client->name }}</h1>
   <p class="text-sm text-black opacity-80 font-medium mb-10">Bekijk de gegevens van {{ $client->name }}.</p>

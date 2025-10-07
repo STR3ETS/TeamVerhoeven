@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Stripe\StripeClient;
+use App\Models\ClientTodoItem;
 
 class CheckoutController extends Controller
 {
@@ -300,6 +301,9 @@ class CheckoutController extends Controller
 
                 $profile->save();
 
+                $pkg = (string)($intake->payload['package'] ?? 'pakket_a');
+                $dur = (int)($intake->payload['duration_weeks'] ?? 12);
+                $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
                 // [AK] gebruiks­count ophogen
                 if ($forceFake) {
                     \App\Models\AccessKey::where('id', $ak['id'])->increment('uses_count');
@@ -541,6 +545,10 @@ class CheckoutController extends Controller
 
                 $profile->save();
 
+                $pkg = (string)($intake->payload['package'] ?? 'pakket_a');
+                $dur = (int)($intake->payload['duration_weeks'] ?? 12);
+                $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
+                
                 return [$user, $intake, $order];
             });
 
@@ -766,5 +774,60 @@ class CheckoutController extends Controller
             ->first();
 
         return $coach?->id;
+    }
+
+    private function seedDefaultTodosForClient(int $clientUserId, string $package, int $durationWeeks): void
+    {
+        $defs = [];
+        $pos  = 10; // beginpositie (ruimte laten voor handmatige items)
+
+        // pakket B/C delen
+        if (in_array($package, ['pakket_b','pakket_c'], true)) {
+            $defs[] = ['label' => '30 min call met coach', 'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
+
+            if ($package === 'pakket_b') {
+                if ($durationWeeks === 24) {
+                    // keuze: coach kiest er 1 → beide als optioneel, met notitie "kies één"
+                    $defs[] = ['label' => '1x 2Befit supplement', 'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
+                    $defs[] = ['label' => '1x voedingsplan',       'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
+                }
+            }
+
+            if ($package === 'pakket_c') {
+                if ($durationWeeks === 12) {
+                    // keuze: 1 van de 2
+                    $defs[] = ['label' => '1x 2Befit supplement', 'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
+                    $defs[] = ['label' => '1x voedingsplan',       'optional' => true, 'notes' => 'Kies één: supplement of voedingsplan', 'pos' => $pos]; $pos += 10;
+                } elseif ($durationWeeks === 24) {
+                    // beide
+                    $defs[] = ['label' => '1x 2Befit supplement', 'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
+                    $defs[] = ['label' => '1x voedingsplan',       'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
+                }
+                // t-shirt bij pakket C (altijd)
+                $defs[] = ['label' => 'Gratis 2Befit workout t-shirt', 'optional' => false, 'notes' => null, 'pos' => $pos]; $pos += 10;
+            }
+        }
+
+        if (empty($defs)) {
+            return; // pakket A of geen regels → niets aanmaken
+        }
+
+        foreach ($defs as $d) {
+            ClientTodoItem::firstOrCreate(
+                [
+                    'client_user_id' => $clientUserId,
+                    'label'          => $d['label'],
+                    'source'         => 'system',
+                    'package'        => $package,
+                    'duration_weeks' => $durationWeeks,
+                ],
+                [
+                    'created_by_user_id' => null,
+                    'is_optional'        => (bool)$d['optional'],
+                    'position'           => (int)$d['pos'],
+                    'notes'              => $d['notes'],
+                ]
+            );
+        }
     }
 }
