@@ -219,7 +219,7 @@
                             <td class="px-3 py-2 text-[#c8ab7a] font-medium text-right">{{ $fromHr }}</td>
                             <td class="px-3 py-2 text-[#c8ab7a] font-medium">{{ $toHr }}</td>
 
-                            <td class="px-3 py-2 text-gray-400"&gt;</td>
+                            <td class="px-3 py-2 text-gray-400"></td>
 
                             <td class="px-3 py-2 text-black/80">{{ $row['breath'] }}</td>
                             <td class="px-3 py-2 text-black/80">{{ $row['rating'] }}</td>
@@ -258,19 +258,28 @@
         @foreach ($percentages as $i => $p)
             @php
                 $left = ($i / $lastIndex) * 100;
-                // transform per positie: midden = -50%, eerste = 0, laatste = -100%
+                // transform + align
                 $transform = 'translateX(-50%)';
                 $align     = 'text-center';
-                if ($i === 0) { $transform = 'translateX(0)';     $align = 'text-left';  }
+                if ($i === 0) { $transform = 'translateX(0)'; $align = 'text-left'; }
                 if ($i === $lastIndex) { $transform = 'translateX(-100%)'; $align = 'text-right'; }
+
+                // Verberg op mobiel om de 5% (alle “oneven” indexen) -> effectief 10%-stappen op mobiel
+                $hideOnMobile = ($i % 2) === 1; // 50,55,60,... -> index 0,1,2,... verberg index 1,3,5,...
+                $tickVisibilityClass  = $hideOnMobile ? 'hidden sm:block' : ''; // streepje zichtbaarheid
+                $labelVisibilityClass = $hideOnMobile ? 'hidden sm:block' : ''; // label zichtbaarheid
             @endphp
+
+            {{-- streepje --}}
             <span
-                class="absolute top-2 -translate-y-1/2 w-px h-3 bg-white/50"
+                class="absolute top-2 -translate-y-1/2 w-px h-3 bg-white/50 {{ $tickVisibilityClass }}"
                 style="left: {{ $left }}%"
                 aria-hidden="true"
             ></span>
+
+            {{-- label --}}
             <div
-                class="absolute top-4 mt-2 {{ $align }} leading-tight"
+                class="absolute top-4 mt-2 {{ $align }} leading-tight {{ $labelVisibilityClass }}"
                 style="left: {{ $left }}%; transform: {{ $transform }};"
             >
                 <div class="text-black text-[13px] font-semibold">

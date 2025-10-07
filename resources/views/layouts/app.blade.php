@@ -106,12 +106,12 @@
                                 <span class="text-black font-semibold text-xs pt-0.5">Overzicht</span>
                             </a>
                         </li>
-                        <li>
+                        <!-- <li>
                             <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-clipboard-user fa-xs text-black"></i>
                                 <span class="text-black font-semibold text-xs pt-0.5">Weekplanning</span>
                             </a>
-                        </li>
+                        </li> -->
                         <li>
                             <a href="#" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
@@ -204,12 +204,12 @@
                                 <span class="text-black font-semibold text-xs pt-0.5">Overzicht</span>
                             </a>
                         </li>
-                        <li>
+                        <!-- <li>
                             <a href="#" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-clipboard-user fa-xs text-black"></i>
                                 <span class="text-black font-semibold text-xs pt-0.5">Weekplanning</span>
                             </a>
-                        </li>
+                        </li> -->
                         <li>
                             <a href="{{route('client.threads.index')}}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
