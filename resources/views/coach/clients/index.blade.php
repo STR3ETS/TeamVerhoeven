@@ -28,8 +28,8 @@
       @endif
     </div>
   </form>
-  <div class="rounded-2xl border border-gray-200 overflow-hidden">
-    <table class="w-full text-sm">
+  <div class="rounded-2xl border border-gray-200 overflow-hidden overflow-x-auto">
+    <table class="min-w-[780px] w-full text-sm">
       <thead class="bg-gray-50 text-gray-700">
         <tr>
           <th class="px-3 py-2 text-left">Klant</th>

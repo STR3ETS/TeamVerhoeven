@@ -286,31 +286,42 @@
               "
         ></div>
         
-        @foreach ($percentages as $i => $p)
-        @php
+@foreach ($percentages as $i => $p)
+    @php
         $left = ($i / $lastIndex) * 100;
+        // transform + align
         $transform = 'translateX(-50%)';
         $align     = 'text-center';
         if ($i === 0) { $transform = 'translateX(0)'; $align = 'text-left'; }
         if ($i === $lastIndex) { $transform = 'translateX(-100%)'; $align = 'text-right'; }
-        @endphp
-        <span
-        class="absolute top-2 -translate-y-1/2 w-px h-3 bg-white/50"
+
+        // Verberg op mobiel om de 5% (alle “oneven” indexen) -> effectief 10%-stappen op mobiel
+        $hideOnMobile = ($i % 2) === 1; // 50,55,60,... -> index 0,1,2,... verberg index 1,3,5,...
+        $tickVisibilityClass  = $hideOnMobile ? 'hidden sm:block' : ''; // streepje zichtbaarheid
+        $labelVisibilityClass = $hideOnMobile ? 'hidden sm:block' : ''; // label zichtbaarheid
+    @endphp
+
+    {{-- streepje --}}
+    <span
+        class="absolute top-2 -translate-y-1/2 w-px h-3 bg-white/50 {{ $tickVisibilityClass }}"
         style="left: {{ $left }}%"
         aria-hidden="true"
-        ></span>
-        <div
-        class="absolute top-4 mt-2 {{ $align }} leading-tight"
+    ></span>
+
+    {{-- label --}}
+    <div
+        class="absolute top-4 mt-2 {{ $align }} leading-tight {{ $labelVisibilityClass }}"
         style="left: {{ $left }}%; transform: {{ $transform }};"
-        >
+    >
         <div class="text-black text-[13px] font-semibold">
-          {{ $p }}<span class="pl-0.5">%</span>
+            {{ $p }}<span class="pl-0.5">%</span>
         </div>
         <div class="text-[#c8ab7a] text-[13px] font-medium">
-          {{ $zones[$p] ?? '—' }}
+            {{ $zones[$p] ?? '—' }}
         </div>
-      </div>
-      @endforeach
+    </div>
+@endforeach
+
       
       <div class="h-12"></div>
     </div>

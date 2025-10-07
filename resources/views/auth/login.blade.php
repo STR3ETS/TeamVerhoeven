@@ -55,7 +55,7 @@
     @endif
 
     {{-- Formulier 1: e-mailadres (in verify-mode: alleen lezen, zonder knoppen) --}}
-    <form method="POST" action="{{ route('login.request') }}" class="hidden space-y-4">
+    <form method="POST" action="{{ route('login.request') }}" class="space-y-4">
       @csrf
       <div>
         <label for="email" class="text-sm font-medium text-black mb-1 block">Wat is je e-mailadres?</label>
@@ -76,9 +76,9 @@
       @endunless
     </form>
 
-    <div class="rounded-xl border border-orange-200 bg-orange-50 text-orange-700 p-3 text-xs">
+    <!-- <div class="rounded-xl border border-orange-200 bg-orange-50 text-orange-700 p-3 text-xs">
       <strong>We zijn bijna zover!</strong> 🎉<br>Binnenkort kun jij hier inloggen in jouw persoonlijke coaching platform.<br><br><a href="/">Klik <span class="underline">hier</span> om terug te keren naar home</a>
-    </div>
+    </div> -->
 
     {{-- Formulier 2: inloggen met code — alleen in verify-mode --}}
     @if ($verifying)
