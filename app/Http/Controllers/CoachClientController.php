@@ -15,17 +15,21 @@ class CoachClientController extends Controller
     public function index(Request $request)
     {
         $q = trim((string) $request->get('q', ''));
+        $coach = $request->user();
 
-        $clients = User::query()
+        $clients = \App\Models\User::query()
             ->where('role', 'client')
+            ->whereHas('clientProfile', function ($sub) use ($coach) {
+                $sub->where('coach_id', $coach->id);
+            })
             ->when($q, function ($qb) use ($q) {
                 $qb->where(function ($sub) use ($q) {
                     $sub->where('name', 'like', "%{$q}%")
                         ->orWhere('email', 'like', "%{$q}%");
                 });
             })
+            ->with('clientProfile')
             ->orderBy('name')
-            ->with(['clientProfile'])
             ->paginate(20);
 
         return view('coach.clients.index', compact('clients', 'q'));
