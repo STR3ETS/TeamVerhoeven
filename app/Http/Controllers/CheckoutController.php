@@ -35,6 +35,7 @@ class CheckoutController extends Controller
             'name'         => 'required|string|max:120',
             'email'        => 'required|email',
             'phone'        => 'nullable|string|max:50',
+            'coach_id'     => 'nullable|exists:users,id,role,coach',
             'dob'          => 'required|date',
             'gender'       => 'required|in:man,vrouw',
             'street'       => 'required|string|max:120',
@@ -103,6 +104,8 @@ class CheckoutController extends Controller
         $monthlyAmount   = $per4w;
         $unitAmountCents = (int) round($monthlyAmount * 100);
 
+        $coachId = $data['coach_id'] ?? $this->findCoachIdByPreference($data['preferred_coach'] ?? 'none');
+
         // 3) Payload voor Intake
         $payload = [
             'package'        => $data['package'],
@@ -111,6 +114,7 @@ class CheckoutController extends Controller
                 'name'             => $data['name'],
                 'email'            => $data['email'],
                 'phone'            => $data['phone'] ?? null,
+                'coach_id'        => $coachId ?? null,
                 'dob'              => $data['dob'],
                 'gender'           => $data['gender'],
                 'street'           => $data['street'],
@@ -227,6 +231,10 @@ class CheckoutController extends Controller
 
                 $profile = ClientProfile::firstOrNew(['user_id' => $user->id]);
                 $profile->birthdate        = $contact['dob'] ?? $profile->birthdate;
+                if (empty($profile->coach_id)) {
+                    $profile->coach_id = ($contact['coach_id'] ?? null)
+                        ?: $this->findCoachIdByPreference($contact['preferred_coach'] ?? 'none');
+                }
                 $profile->gender           = $this->normalizeGender($contact['gender'] ?? null) ?? $profile->gender;
                 $profile->coach_preference = $contact['preferred_coach'] ?? $profile->coach_preference ?? 'none';
                 $profile->period_weeks     = (int)($intake->payload['duration_weeks'] ?? $profile->period_weeks ?? 12);
@@ -457,6 +465,10 @@ class CheckoutController extends Controller
                 $profile = ClientProfile::firstOrNew(['user_id' => $user->id]);
 
                 $profile->birthdate        = $contact['dob'] ?? $profile->birthdate;
+                if (empty($profile->coach_id)) {
+                    $profile->coach_id = ($contact['coach_id'] ?? null)
+                        ?: $this->findCoachIdByPreference($contact['preferred_coach'] ?? 'none');
+                }
                 $profile->gender           = $this->normalizeGender($contact['gender'] ?? null) ?? $profile->gender;
                 $profile->coach_preference = $contact['preferred_coach'] ?? $profile->coach_preference ?? 'none';
                 $profile->period_weeks     = (int)($intake->payload['duration_weeks'] ?? $profile->period_weeks ?? 12);
