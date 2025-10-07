@@ -6,7 +6,6 @@
   $card  = 'p-5 bg-white rounded-3xl border border-gray-300';
   $muted = 'text-gray-500';
 @endphp
-@include('coach.clients.partials.todos', ['client' => $client])
   <a href="{{ route('coach.clients.index') }}" class="text-xs text-black font-semibold opacity-50 hover:opacity-100 transition duration-300"><i class="fa-solid fa-arrow-right-long fa-flip-horizontal fa-sm mr-2"></i> Terug naar overzicht</a>
   <h1 class="text-2xl font-bold mb-2 mt-1">Gegevens van {{ $client->name }}</h1>
   <p class="text-sm text-black opacity-80 font-medium mb-10">Bekijk de gegevens van {{ $client->name }}.</p>
@@ -162,6 +161,9 @@
     ];
   @endphp
 
+  <h2 class="text-lg font-bold mb-2">Takenlijst</h2>
+  @include('coach.clients.partials.todos', ['client' => $client])
+
   <h2 class="text-lg font-bold mb-2">Informatie</h2>
   <section class="grid gap-4 grid-cols-1">
     <div class="p-5 bg-white rounded-3xl border border-gray-300">
@@ -174,7 +176,7 @@
               <th class="px-3 py-2 text-center">Intensiteit</th>
               <th class="px-3 py-2 text-center" colspan="2">Polsslag</th>
               @foreach ($distances as $d)
-                <th class="px-3 py-2 text-center" colspan="2">{{ $d }} m</th>
+              <th class="px-3 py-2 text-center" colspan="2">{{ $d }} m</th>
               @endforeach
               <th class="px-3 py-2 text-left"></th>
             </tr>
@@ -184,36 +186,36 @@
               <th class="px-3 py-1">Van</th>
               <th class="px-3 py-1">Tot</th>
               @foreach ($distances as $d)
-                <th class="px-3 py-1">Van</th>
-                <th class="px-3 py-1">Tot</th>
+              <th class="px-3 py-1">Van</th>
+              <th class="px-3 py-1">Tot</th>
               @endforeach
               <th class="px-3 py-1"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             @foreach ([4,5] as $i)
-              <tr>
-                <td class="px-3 py-2 font-medium whitespace-nowrap">{{ $intervalRows[$i]['label'] }}</td>
-                <td class="px-3 py-2 flex justify-center">
-                  <span class="min-w-5 min-h-5 flex items-center justify-center rounded-full text-gray-600 font-bold bg-gray-300">
-                    {{ $i }}
-                  </span>
-                </td>
-                <td class="px-3 py-2 text-[#c8ab7a] font-medium">{{ $hrRange[$i]['van'] ?? '—' }}</td>
-                <td class="px-3 py-2 text-[#c8ab7a] font-medium">{{ $hrRange[$i]['tot'] ?? '—' }}</td>
-
-                @foreach ($distances as $d)
-                  <td class="px-3 py-2 font-semibold tabular-nums">{{ $tijden[$i][$d]['van'] }}</td>
-                  <td class="px-3 py-2 font-semibold tabular-nums">{{ $tijden[$i][$d]['tot'] }}</td>
-                @endforeach
-                <td class="px-3 py-2">sec</td>
-              </tr>
+            <tr>
+              <td class="px-3 py-2 font-medium whitespace-nowrap">{{ $intervalRows[$i]['label'] }}</td>
+              <td class="px-3 py-2 flex justify-center">
+                <span class="min-w-5 min-h-5 flex items-center justify-center rounded-full text-gray-600 font-bold bg-gray-300">
+                  {{ $i }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-[#c8ab7a] font-medium">{{ $hrRange[$i]['van'] ?? '—' }}</td>
+              <td class="px-3 py-2 text-[#c8ab7a] font-medium">{{ $hrRange[$i]['tot'] ?? '—' }}</td>
+              
+              @foreach ($distances as $d)
+              <td class="px-3 py-2 font-semibold tabular-nums">{{ $tijden[$i][$d]['van'] }}</td>
+              <td class="px-3 py-2 font-semibold tabular-nums">{{ $tijden[$i][$d]['tot'] }}</td>
+              @endforeach
+              <td class="px-3 py-2">sec</td>
+            </tr>
             @endforeach
           </tbody>
         </table>
       </div>
     </div>
-
+    
     <div class="p-5 bg-white rounded-3xl border border-gray-300">
       <div class="text-sm text-black font-semibold opacity-50 mb-2">Hartslagzones</div>
       <div class="overflow-x-auto rounded-2xl border border-gray-200 mb-4">
@@ -232,41 +234,41 @@
           </thead>
           <tbody class="divide-y divide-gray-100">
             @foreach ($trainingRows as $row)
-              @php
-                $fromPct = $row['from'];
-                $toPct   = $row['to'];
-                $fromHr  = $zones[$fromPct] ?? '—';
-                $toHr    = $zones[$toPct]   ?? '—';
-              @endphp
-              <tr>
-                <td class="px-3 py-2 font-medium">{{ $row['name'] }}</td>
-                <td class="px-3 py-2 flex justify-center items-center">
-                  <span class="min-w-5 min-h-5 flex items-center justify-center rounded-full text-gray-600 font-bold bg-gray-300 pr-0.25">{{ $row['int'] }}</span>
-                </td>
+            @php
+            $fromPct = $row['from'];
+            $toPct   = $row['to'];
+            $fromHr  = $zones[$fromPct] ?? '—';
+            $toHr    = $zones[$toPct]   ?? '—';
+            @endphp
+            <tr>
+              <td class="px-3 py-2 font-medium">{{ $row['name'] }}</td>
+              <td class="px-3 py-2 flex justify-center items-center">
+                <span class="min-w-5 min-h-5 flex items-center justify-center rounded-full text-gray-600 font-bold bg-gray-300 pr-0.25">{{ $row['int'] }}</span>
+              </td>
+              
+              <td class="px-3 py-2 text-[#c8ab7a] font-medium text-right">{{ $fromHr }}</td>
+              <td class="px-3 py-2 text-[#c8ab7a] font-medium">{{ $toHr }}</td>
 
-                <td class="px-3 py-2 text-[#c8ab7a] font-medium text-right">{{ $fromHr }}</td>
-                <td class="px-3 py-2 text-[#c8ab7a] font-medium">{{ $toHr }}</td>
-
-                <td class="px-3 py-2 text-gray-400"></td>
-
-                <td class="px-3 py-2 text-black/80">{{ $row['breath'] }}</td>
-                <td class="px-3 py-2 text-black/80">{{ $row['rating'] }}</td>
-                <td class="px-3 py-2 text-black/80">{{ $row['tempo'] }}</td>
-              </tr>
+              <td class="px-3 py-2 text-gray-400"></td>
+              
+              <td class="px-3 py-2 text-black/80">{{ $row['breath'] }}</td>
+              <td class="px-3 py-2 text-black/80">{{ $row['rating'] }}</td>
+              <td class="px-3 py-2 text-black/80">{{ $row['tempo'] }}</td>
+            </tr>
             @endforeach
           </tbody>
         </table>
       </div>
-
+      
       @php
-        $n = count($percentages);
-        $lastIndex = max(1, $n - 1);
+      $n = count($percentages);
+      $lastIndex = max(1, $n - 1);
       @endphp
-
+      
       <div class="col-span-11 relative">
         <div
-          class="h-4 rounded-full"
-          style="
+        class="h-4 rounded-full"
+        style="
             background: linear-gradient(
               to right,
               #15803d 0%,
@@ -280,38 +282,38 @@
               #ef4444 72.72%,
               #dc2626 81.81%,
               #dc2626 100%
-            );
-          "
+              );
+              "
         ></div>
-
+        
         @foreach ($percentages as $i => $p)
-          @php
-            $left = ($i / $lastIndex) * 100;
-            $transform = 'translateX(-50%)';
-            $align     = 'text-center';
-            if ($i === 0) { $transform = 'translateX(0)'; $align = 'text-left'; }
-            if ($i === $lastIndex) { $transform = 'translateX(-100%)'; $align = 'text-right'; }
-          @endphp
-          <span
-            class="absolute top-2 -translate-y-1/2 w-px h-3 bg-white/50"
-            style="left: {{ $left }}%"
-            aria-hidden="true"
-          ></span>
-          <div
-            class="absolute top-4 mt-2 {{ $align }} leading-tight"
-            style="left: {{ $left }}%; transform: {{ $transform }};"
-          >
-            <div class="text-black text-[13px] font-semibold">
-              {{ $p }}<span class="pl-0.5">%</span>
-            </div>
-            <div class="text-[#c8ab7a] text-[13px] font-medium">
-              {{ $zones[$p] ?? '—' }}
-            </div>
-          </div>
-        @endforeach
-
-        <div class="h-12"></div>
+        @php
+        $left = ($i / $lastIndex) * 100;
+        $transform = 'translateX(-50%)';
+        $align     = 'text-center';
+        if ($i === 0) { $transform = 'translateX(0)'; $align = 'text-left'; }
+        if ($i === $lastIndex) { $transform = 'translateX(-100%)'; $align = 'text-right'; }
+        @endphp
+        <span
+        class="absolute top-2 -translate-y-1/2 w-px h-3 bg-white/50"
+        style="left: {{ $left }}%"
+        aria-hidden="true"
+        ></span>
+        <div
+        class="absolute top-4 mt-2 {{ $align }} leading-tight"
+        style="left: {{ $left }}%; transform: {{ $transform }};"
+        >
+        <div class="text-black text-[13px] font-semibold">
+          {{ $p }}<span class="pl-0.5">%</span>
+        </div>
+        <div class="text-[#c8ab7a] text-[13px] font-medium">
+          {{ $zones[$p] ?? '—' }}
+        </div>
       </div>
+      @endforeach
+      
+      <div class="h-12"></div>
     </div>
-  </section>
+  </div>
+</section>
 @endsection

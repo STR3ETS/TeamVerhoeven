@@ -4,10 +4,10 @@
 @section('content')
 @if($role === 'coach')
     <h1 class="text-2xl font-bold mb-2">Chat met je klanten</h1>
-    <p class="text-sm text-black opacity-80 font-medium mb-10">Chat snel en gemakkelijk met jouw klanten<br>en begeleid ze door hun traject!</p>
+    <p class="text-sm text-black opacity-80 font-medium mb-6">Chat snel en gemakkelijk met jouw klanten<br>en begeleid ze door hun traject!</p>
     @elseif($role === 'client')
     <h1 class="text-2xl font-bold mb-2">Chat met je coach</h1>
-    <p class="text-sm text-black opacity-80 font-medium mb-10">Chat snel en gemakkelijk met jouw coach.<br>Beschrijf wat je nodig hebt of geef blessures door.</p>
+    <p class="text-sm text-black opacity-80 font-medium mb-6">Chat snel en gemakkelijk met jouw coach.<br>Beschrijf wat je nodig hebt of geef blessures door.</p>
 @endif
 @if($role === 'client')
     @can('create', App\Models\Thread::class)
@@ -22,44 +22,52 @@
     @endcan
 @endif
 
-<ul class="mt-7 flex flex-col gap-2">
-    <h2 class="text-lg font-bold">Gesprekken</h2>
+<div class="mt-7">
+  <h2 class="text-lg font-bold">Gesprekken</h2>
+
+  <ul class="mt-3 list-none p-0 space-y-2">
     @forelse($threads as $t)
         @php
-            $href = $role === 'client'
+        $href = $role === 'client'
             ? route('client.threads.show', $t)
             : route('coach.threads.show',  $t);
 
-            $clientName = data_get($t, 'client.user.name')
-            ?? data_get($t, 'client.name')
-            ?? data_get($t, 'client_name')
-            ?? 'Onbekende klant';
+        // specifiek: pak naam via client_user_id -> users.name
+        $clientName = optional($t->clientUser)->name ?? 'Onbekende klant';
         @endphp
-        <li>
-            <a href="{{ $href }}"
-            class="p-6 bg-white rounded-2xl border hover:border-[#c8ab7a] flex items-center justify-between focus:outline-none transition duration-300">
-                <div>
-                    @if($role === 'coach')
-                        <span class="text-xs text-gray-500 inline-flex items-center px-2 py-0.5 rounded border mb-2">
-                            {{ $clientName }}
-                        </span>
-                    @endif
 
-                    <div class="font-semibold text-sm mb-2">
-                        {{ $t->subject ?? 'Gesprek' }}
-                    </div>
-
-                    <div class="flex text-xs items-center gap-2">
-                        <span>{{ $t->created_at->format('d-m-Y H:i') }}</span>
-                    </div>
-                </div>
+      <li>
+        <a href="{{ $href }}" class="block group">
+          <div class="p-5 bg-white rounded-3xl border border-gray-300
+                      flex items-center justify-between gap-4
+                      transition duration-300 hover:border-[#c8ab7a]">
+            <div>
                 @if($role === 'coach')
-                    <div class="w-4 h-4 bg-green-500 animate-pulse rounded-full"></div>
+                <span class="text-xs bg-gray-200 font-semibold text-gray-600 inline-flex items-center px-2 py-0.5 rounded mb-2">
+                    {{ $clientName }}
+                </span>
                 @endif
-            </a>
-        </li>
+
+              <div class="font-semibold text-sm mb-1 group-hover:opacity-90">
+                {{ $t->subject ?? 'Gesprek' }}
+              </div>
+
+              <div class="flex text-xs items-center gap-2 text-gray-500">
+                <span>Aangemaakt op {{ $t->created_at->format('d-m-Y H:i') }}</span>
+              </div>
+            </div>
+
+            @if($role === 'coach')
+              <span class="shrink-0 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+            @endif
+          </div>
+        </a>
+      </li>
     @empty
-        <li class="p-3 bg-white rounded border text-sm text-gray-500">Geen threads gevonden.</li>
+      <li class="p-5 bg-white rounded-3xl border border-gray-300 text-sm font-medium text-gray-400">
+        Geen gesprekken gevonden.
+      </li>
     @endforelse
-</ul>
+  </ul>
+</div>
 @endsection
