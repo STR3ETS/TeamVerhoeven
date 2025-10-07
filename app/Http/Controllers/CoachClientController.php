@@ -17,7 +17,7 @@ class CoachClientController extends Controller
         $q = trim((string) $request->get('q', ''));
         $coach = $request->user();
 
-        $clients = \App\Models\User::query()
+        $clients = User::query()
             ->where('role', 'client')
             ->whereHas('clientProfile', function ($sub) use ($coach) {
                 $sub->where('coach_id', $coach->id);
