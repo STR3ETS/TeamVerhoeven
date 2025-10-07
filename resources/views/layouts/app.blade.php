@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>@yield('title')</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -92,9 +92,9 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('coach.plans.index') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <a href="{{ route('coach.clients.index') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-dumbbell fa-xs text-black"></i>
-                                <span class="text-black font-semibold text-xs pt-0.5">Trainingsplannen</span>
+                                <span class="text-black font-semibold text-xs pt-0.5">Klanten</span>
                             </a>
                         </li>
                     @endif
@@ -190,9 +190,9 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('coach.plans.index') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                            <a href="{{ route('coach.clients.index') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
                                 <i class="min-w-4 fa-solid fa-dumbbell fa-xs text-black"></i>
-                                <span class="text-black font-semibold text-xs pt-0.5">Trainingsplannen</span>
+                                <span class="text-black font-semibold text-xs pt-0.5">Klanten</span>
                             </a>
                         </li>
                     @endif
