@@ -118,4 +118,33 @@ class CoachClientTodoController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    public function update(User $client, ClientTodoItem $todo, Request $request)
+    {
+        $this->authorizeCoachForClient($client, $request);
+
+        if ((int)$todo->client_user_id !== (int)$client->id) {
+            abort(404);
+        }
+
+        $data = $request->validate([
+            'notes'       => ['nullable','string','max:2000'],
+            'due_date'    => ['nullable','date'],
+            'is_optional' => ['nullable','boolean'], // optioneel: kan je ook aanpassen
+            // 'label' => ['sometimes','string','max:200'], // laat uit als je label niet wilt editen
+        ]);
+
+        $todo->fill([
+            'notes'       => $data['notes']       ?? $todo->notes,
+            'due_date'    => $data['due_date']    ?? $todo->due_date,
+            'is_optional' => array_key_exists('is_optional',$data)
+                            ? (bool)$data['is_optional']
+                            : $todo->is_optional,
+        ]);
+
+        $todo->save();
+
+        return back()->with('success', 'Taak bijgewerkt.');
+    }
+
 }

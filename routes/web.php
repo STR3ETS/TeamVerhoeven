@@ -38,6 +38,7 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('/{todo}/toggle', [CoachClientTodoController::class, 'toggle'])->name('toggle');     // afvinken/undo
             Route::delete('/{todo}',    [CoachClientTodoController::class, 'destroy'])->name('destroy');       // verwijderen
             Route::patch('/reorder',    [CoachClientTodoController::class, 'reorder'])->name('reorder');       // sorteren
+            Route::patch('/{todo}', [CoachClientTodoController::class, 'update'])->name('update');
         });
     });
     Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
