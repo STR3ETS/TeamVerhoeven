@@ -164,6 +164,17 @@
   <h2 class="text-lg font-bold mb-2">Takenlijst</h2>
   @include('coach.clients.partials.todos', ['client' => $client])
 
+  <h2 class="text-lg font-bold mb-2">Planning</h2>
+  <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
+    <div class="flex flex-col gap-4 items-start">
+      <p class="text-sm text-gray-500">Nog geen planning gemaakt voor {{ $client->name }}</p>
+      <a href="{{ route('coach.clients.planning.create', $client) }}" class="w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
+          Planning maken
+      </a>
+    </div>
+  </div>
+
+
   <h2 class="text-lg font-bold mb-2">Informatie</h2>
   <section class="grid gap-4 grid-cols-1">
     <div class="p-5 bg-white rounded-3xl border border-gray-300">

@@ -7,6 +7,7 @@ use App\Http\Controllers\CoachClientController;
 use App\Http\Controllers\CoachClientTodoController;
 use App\Http\Controllers\CoachThreadController;
 use App\Http\Controllers\MagicLoginController;
+use App\Http\Controllers\CoachPlanningController;
 use Illuminate\Http\Request;
 use App\Models\AccessKey;
 
@@ -22,16 +23,15 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::prefix('coach')->name('coach.')->middleware('role:coach')->group(function () {
         Route::get('/', fn () => view('coach.index'))->name('index');
-        Route::get('/threads',                 [CoachThreadController::class, 'index'])->name('threads.index');
-        Route::get('/threads/{thread}',        [CoachThreadController::class, 'show'])->name('threads.show');
-        Route::post('/threads/{thread}/msg',   [CoachThreadController::class, 'storeMessage'])->name('threads.messages.store');
-        Route::get('/clients',                 [CoachClientController::class, 'index'])->name('clients.index');
-        Route::get('/clients/{client}',        [CoachClientController::class, 'show'])->name('clients.show');
-        Route::get('/clients/{client}/intake', [CoachClientController::class, 'intake'])->name('clients.intake');
-        Route::get('/claim-clients', [CoachClientController::class, 'claim'])
-            ->name('clients.claim');
-        Route::post('/claim-clients/{profile}', [CoachClientController::class, 'claimStore'])
-            ->name('clients.claim.store');
+        Route::get('/threads',                          [CoachThreadController::class, 'index'])->name('threads.index');
+        Route::get('/threads/{thread}',                 [CoachThreadController::class, 'show'])->name('threads.show');
+        Route::post('/threads/{thread}/msg',            [CoachThreadController::class, 'storeMessage'])->name('threads.messages.store');
+        Route::get('/clients',                          [CoachClientController::class, 'index'])->name('clients.index');
+        Route::get('/clients/{client}',                 [CoachClientController::class, 'show'])->name('clients.show');
+        Route::get('/clients/{client}/intake',          [CoachClientController::class, 'intake'])->name('clients.intake');
+        Route::get('/clients/{client}/planning/create', [CoachPlanningController::class, 'create'])->name('clients.planning.create');
+        Route::get('/claim-clients',                    [CoachClientController::class, 'claim'])->name('clients.claim');
+        Route::post('/claim-clients/{profile}',         [CoachClientController::class, 'claimStore'])->name('clients.claim.store');
 
         Route::prefix('clients/{client}/todos')->name('clients.todos.')->group(function () {
             Route::post('/',            [CoachClientTodoController::class, 'store'])->name('store');           // taak toevoegen

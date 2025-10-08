@@ -6,13 +6,15 @@ use App\Models\User;
 use App\Models\ClientProfile;
 use App\Models\Intake;
 use App\Models\Order;
+use App\Models\ClientTodoItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use MailchimpMarketing\ApiClient as Mailchimp;
+use MailchimpMarketing\ApiException as MailchimpApiException;
 use Stripe\StripeClient;
-use App\Models\ClientTodoItem;
 
 class CheckoutController extends Controller
 {
@@ -115,7 +117,7 @@ class CheckoutController extends Controller
                 'name'             => $data['name'],
                 'email'            => $data['email'],
                 'phone'            => $data['phone'] ?? null,
-                'coach_id'        => $coachId ?? null,
+                'coach_id'         => $coachId ?? null,
                 'dob'              => $data['dob'],
                 'gender'           => $data['gender'],
                 'street'           => $data['street'],
@@ -225,7 +227,7 @@ class CheckoutController extends Controller
                 $order->provider_ref = $forceFake ? ('access_key_'.$ak['id']) : ('fake_'.$order->id);
                 $order->save();
 
-                // ClientProfile vullen (zelfde als bestaande FAKE branch)
+                // ClientProfile vullen
                 $contact = $intake->payload['contact'] ?? [];
                 $p       = $intake->payload['profile'] ?? [];
                 $goal    = $intake->payload['goal'] ?? [];
@@ -304,11 +306,42 @@ class CheckoutController extends Controller
                 $pkg = (string)($intake->payload['package'] ?? 'pakket_a');
                 $dur = (int)($intake->payload['duration_weeks'] ?? 12);
                 $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
+
                 // [AK] gebruiks­count ophogen
                 if ($forceFake) {
                     \App\Models\AccessKey::where('id', $ak['id'])->increment('uses_count');
                 }
             });
+
+            // Mailchimp sync NA commit (FAKE als "paid")
+            try {
+                $contact = $intake->payload['contact'] ?? [];
+                $mcEmail = $contact['email'] ?? $data['email'] ?? null;
+
+                $merge = [
+                    'FNAME' => $contact['name'] ?? ($data['name'] ?? null),
+                    'PAKKET'=> $intake->payload['package'] ?? null,
+                    'DUUR'  => $intake->payload['duration_weeks'] ?? null,
+                ];
+
+                $tags = array_filter([
+                    env('MAILCHIMP_WELCOME_TAG', '2BeFit: Paid'),
+                    'paid',
+                    $intake->payload['package'] ?? null, // pakket_a/b/c
+                ]);
+
+                Log::info('[checkout.create] scheduling mailchimp sync', [
+                    'email'  => $mcEmail,
+                    'merge'  => $merge,
+                    'tags'   => $tags,
+                    'reason' => 'FAKE paid',
+                ]);
+                DB::afterCommit(function () use ($mcEmail, $merge, $tags) {
+                    $this->syncMailchimpContact($mcEmail, $merge, $tags);
+                });
+            } catch (\Throwable $e) {
+                Log::warning('[checkout.create] mailchimp schedule failed', ['e' => $e->getMessage()]);
+            }
 
             // Opruimen
             if ($forceFake) {
@@ -513,7 +546,7 @@ class CheckoutController extends Controller
                 ], fn($v) => !is_null($v)));
 
                 // Tests
-                if (!empty($p['cooper_meters'])) $profile->test_12min = ['meters' => (int)$p['cooper_meters']];
+                if (!empty($p['cooper_meters'])) $profile->test_12min = ['meters' => (int) $p['cooper_meters']];
                 if (!empty($p['test_5k_pace']))  $profile->test_5k    = $this->paceToJson($p['test_5k_pace']);
                 if (!empty($p['test_10k_pace'])) $profile->test_10k   = $this->paceToJson($p['test_10k_pace']);
                 if (!empty($p['marathon_pace'])) $profile->test_marathon = $this->hmsToJson($p['marathon_pace']);
@@ -548,7 +581,7 @@ class CheckoutController extends Controller
                 $pkg = (string)($intake->payload['package'] ?? 'pakket_a');
                 $dur = (int)($intake->payload['duration_weeks'] ?? 12);
                 $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
-                
+
                 return [$user, $intake, $order];
             });
 
@@ -558,6 +591,36 @@ class CheckoutController extends Controller
                 'order_id'     => $order?->id,
                 'order_status' => $order?->status,
             ]);
+
+            // Mailchimp sync NA commit (échte betaling)
+            try {
+                $contact = $intake->payload['contact'] ?? [];
+                $mcEmail = $contact['email'] ?? $email ?? null;
+
+                $merge = [
+                    'FNAME' => $contact['name'] ?? ($user->name ?? null),
+                    'PAKKET'=> $intake->payload['package'] ?? null,
+                    'DUUR'  => $intake->payload['duration_weeks'] ?? null,
+                ];
+
+                $tags = array_filter([
+                    env('MAILCHIMP_WELCOME_TAG', '2BeFit: Paid'),
+                    'paid',
+                    $intake->payload['package'] ?? null,
+                ]);
+
+                Log::info('[checkout.confirm] scheduling mailchimp sync', [
+                    'email'  => $mcEmail,
+                    'merge'  => $merge,
+                    'tags'   => $tags,
+                    'reason' => 'REAL paid',
+                ]);
+                DB::afterCommit(function () use ($mcEmail, $merge, $tags) {
+                    $this->syncMailchimpContact($mcEmail, $merge, $tags);
+                });
+            } catch (\Throwable $e) {
+                Log::warning('[checkout.confirm] mailchimp schedule failed', ['e' => $e->getMessage()]);
+            }
 
             return response()->json(['ok' => true]);
 
@@ -719,7 +782,110 @@ class CheckoutController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    // ----------------- Helpers -----------------
+    // ----------------- Mailchimp helpers -----------------
+
+    /** Mailchimp client */
+    private function mc(): Mailchimp
+    {
+        $apiKey = env('MAILCHIMP_API_KEY');
+        $server = env('MAILCHIMP_SERVER_PREFIX');
+
+        if (!$apiKey || !$server) {
+            Log::warning('[mailchimp.config] missing', [
+                'has_api_key' => (bool)$apiKey,
+                'server'      => $server ?: null,
+            ]);
+        }
+
+        $mc = new Mailchimp();
+        $mc->setConfig([
+            'apiKey' => $apiKey,
+            'server' => $server,
+        ]);
+
+        return $mc;
+    }
+
+    /** Upsert contact + merge fields + tags (triggert je Journey) */
+    private function syncMailchimpContact(string $email, array $mergeFields = [], array $tags = []): void
+    {
+        Log::info('[mailchimp.sync] start', [
+            'email' => $email,
+            'merge' => $mergeFields,
+            'tags'  => $tags,
+        ]);
+
+        try {
+            $listId = env('MAILCHIMP_AUDIENCE_ID');
+
+            if (!$listId || !$email) {
+                Log::warning('[mailchimp.sync] missing listId or email', [
+                    'has_list_id' => (bool)$listId,
+                    'email'       => $email ?: null,
+                ]);
+                return;
+            }
+
+            // Optioneel: filter merge fields naar alleen niet-lege waarden
+            $merge = collect($mergeFields)
+                ->filter(fn($v) => !is_null($v) && $v !== '')
+                ->all();
+
+            $mc = $this->mc();
+            $subscriberHash = md5(strtolower($email));
+
+            // Upsert member + merge fields
+            $resp1 = $mc->lists->setListMember($listId, $subscriberHash, [
+                'email_address' => $email,
+                'status_if_new' => 'subscribed', // zorg dat hij echt Subscribed wordt
+                'status'        => 'subscribed',
+                'merge_fields'  => $merge,
+            ]);
+            Log::info('[mailchimp.sync] setListMember ok', [
+                'email' => $email,
+                'id'    => $resp1->id ?? null,
+                'status'=> $resp1->status ?? null,
+            ]);
+
+            // Apply tags (alleen niet-lege strings)
+            $cleanTags = collect($tags)
+                ->filter(fn($t) => is_string($t) && trim($t) !== '')
+                ->map(fn($t) => ['name' => trim($t), 'status' => 'active'])
+                ->values()
+                ->all();
+
+            if (!empty($cleanTags)) {
+                $mc->lists->updateListMemberTags($listId, $subscriberHash, [
+                    'tags' => $cleanTags,
+                ]);
+                Log::info('[mailchimp.sync] tags ok', [
+                    'email' => $email,
+                    'tags'  => $cleanTags,
+                ]);
+            } else {
+                Log::info('[mailchimp.sync] no tags to apply', ['email' => $email]);
+            }
+
+            Log::info('[mailchimp.sync] done', ['email' => $email]);
+
+        } catch (MailchimpApiException $e) {
+            // Mailchimp API-fouten geven vaak nuttige details terug:
+            $body = method_exists($e, 'getResponseBody') ? $e->getResponseBody() : null;
+            Log::error('[mailchimp.sync] api_exception', [
+                'email'   => $email,
+                'message' => $e->getMessage(),
+                'body'    => $body, // bevat errors zoals "merge field does not exist"
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[mailchimp.sync] exception', [
+                'email'   => $email,
+                'message' => $e->getMessage(),
+                'trace'   => substr($e->getTraceAsString(), 0, 1500),
+            ]);
+        }
+    }
+
+    // ----------------- Overige helpers -----------------
 
     private function normalizeGender(?string $g): ?string
     {
@@ -829,7 +995,7 @@ class CheckoutController extends Controller
 
                 // altijd t-shirt bij pakket C
                 $defs[] = [
-                    'label'    => 'Gratis 2Befit workout t-shirt',
+                    'label'    => 'Gratis 2BeFit workout t-shirt',
                     'optional' => false,
                     'notes'    => null,
                     'pos'      => $pos,
