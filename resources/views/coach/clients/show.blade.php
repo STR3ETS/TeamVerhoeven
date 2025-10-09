@@ -164,7 +164,7 @@
   <h2 class="text-lg font-bold mb-2">Takenlijst</h2>
   @include('coach.clients.partials.todos', ['client' => $client])
 
-  <h2 class="text-lg font-bold mb-2">Planning</h2>
+  <!-- <h2 class="text-lg font-bold mb-2">Planning</h2>
   <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
     <div class="flex flex-col gap-4 items-start">
       <p class="text-sm text-gray-500">Nog geen planning gemaakt voor {{ $client->name }}</p>
@@ -172,7 +172,7 @@
           Planning maken
       </a>
     </div>
-  </div>
+  </div> -->
 
 
   <h2 class="text-lg font-bold mb-2">Informatie</h2>
