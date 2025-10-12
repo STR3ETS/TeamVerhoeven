@@ -242,10 +242,10 @@
       <div class="flex flex-col gap-4 items-start">
         <p class="text-sm text-gray-500">
           Nog geen planning gemaakt voor
-          {{ $totalWeeks > 1 ? 'week ' . $week : '' }} <span class="block lg:hidden font-semibold"><br>Trainingen kunnen alleen gemaakt worden via de computer</span>
+          {{ $totalWeeks > 1 ? 'week ' . $week : '' }} <span class="block md:hidden font-semibold"><br>Trainingen kunnen alleen gemaakt worden via de computer</span>
         </p>
         <a href="{{ route('coach.clients.trainingplan', [$client, 'week' => $week]) }}"
-          class="hidden lg:block w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
+          class="hidden md:block w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
           Planning maken
         </a>
       </div>
@@ -255,10 +255,10 @@
     <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
       <div class="flex items-start justify-between gap-4 mb-4">
         <div class="text-sm text-black font-semibold opacity-50">
-          Huidig schema (week {{ $week }}) <span class="block lg:hidden font-semibold"><br>Trainingen kunnen alleen bewerkt worden via de computer</span>
+          Huidig schema (week {{ $week }}) <span class="block md:hidden font-semibold"><br>Trainingen kunnen alleen bewerkt worden via de computer</span>
         </div>
         <a href="{{ route('coach.clients.trainingplan', [$client, 'week' => $week]) }}"
-          class="hidden lg:block w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
+          class="hidden md:block w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
           Bewerken
         </a>
       </div>
