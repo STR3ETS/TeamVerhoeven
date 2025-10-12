@@ -7,17 +7,12 @@
 
 <h2 class="text-lg font-bold mb-2">Snelkoppelingen</h2>
 <div class="grid gap-3 grid-cols-1 sm:grid-cols-4 mb-6">
-    <a href="#"
-       class="p-4 bg-[#c8ab7a] hover:bg-[#a89067] transition duration-300 rounded">
-        <div class="font-semibold text-white">Mijn trainingsplan</div>
-        <p class="text-sm text-white">Bekijk je trainingsplan</p>
-    </a>
-    <a href="#"
+    <a href="{{ url('/client/threads/create') }}"
        class="p-4 bg-[#c8ab7a] hover:bg-[#a89067] transition duration-300 rounded">
         <div class="font-semibold text-white">Nieuwe chat met coach</div>
         <p class="text-sm text-white">Start een nieuw gesprek</p>
     </a>
-    <a href="#"
+    <a href="{{ url('/client/threads') }}"
        class="p-4 bg-[#c8ab7a] hover:bg-[#a89067] transition duration-300 rounded">
         <div class="font-semibold text-white">Alle gesprekken met coach</div>
         <p class="text-sm text-white">Overzicht & zoeken</p>
@@ -133,6 +128,135 @@
         ['name' => 'High Intens',  'int' => 5, 'from' => 95, 'to' => 100, 'breath' => 'Zwaar hijgen, praten onmogelijk',           'rating' => 'Maximaal',  'tempo' => 'Hard'],
     ];
 @endphp
+
+@php
+  use Illuminate\Support\Facades\Schema;
+  use Illuminate\Support\Str;
+
+  // Week-setup
+  $totalWeeks = max(1, (int)($profile->period_weeks ?? 1));
+  $week = (int) request('week', 1);
+  if ($week < 1 || $week > $totalWeeks) { $week = 1; }
+
+  // Heeft assignments-tabel een 'week' kolom?
+  $hasWeekCol = Schema::hasColumn('training_assignments', 'week');
+
+  // Day labels + volgorde
+  $daysMap = [
+    'mon' => 'Maandag','tue' => 'Dinsdag','wed' => 'Woensdag',
+    'thu' => 'Donderdag','fri' => 'Vrijdag','sat' => 'Zaterdag','sun' => 'Zondag',
+  ];
+
+  // Phase-rank (zelfde als coach-weergave)
+  $phaseRank = function (?string $phaseLike) {
+      $p = Str::lower($phaseLike ?? '');
+      if (Str::contains($p, 'warm')) return 0;
+      if (Str::contains($p, ['activ','mobil'])) return 1;
+      if (Str::contains($p, ['main','run','hyrox','streng','erg','core'])) return 2;
+      if (Str::contains($p, 'finish')) return 3;
+      if (Str::contains($p, 'cool')) return 4;
+      return 2;
+  };
+
+  // Laad assignments voor ingelogde cliënt
+  $assignments = \App\Models\TrainingAssignment::query()
+      ->where('user_id', auth()->id())
+      ->when($hasWeekCol, fn($q) => $q->where('week', $week))
+      ->with(['card.section','card.blocks.items'])
+      ->orderByRaw("FIELD(day,'mon','tue','wed','thu','fri','sat','sun')")
+      ->orderBy('sort_order')
+      ->get();
+
+  // Groepeer per dag
+  $byDay = $assignments->groupBy('day');
+
+  // Helper: gesorteerd per dag (phase-rank -> sort_order -> id)
+  $sortedForDay = function ($key) use ($byDay, $phaseRank) {
+      return ($byDay[$key] ?? collect())->sort(function($a, $b) use ($phaseRank) {
+          $ra = $phaseRank(optional($a->card?->section)->name);
+          $rb = $phaseRank(optional($b->card?->section)->name);
+          return [$ra, (int)($a->sort_order ?? 0), (int)$a->id]
+               <=> [$rb, (int)($b->sort_order ?? 0), (int)$b->id];
+      });
+  };
+@endphp
+
+<h2 class="text-lg font-bold mb-2">Mijn trainingsschema</h2>
+<div id="planning-root" data-current-week="{{ $week }}">
+  {{-- Week-selector (linkt naar dezelfde pagina met ?week=) --}}
+  <div class="flex flex-wrap gap-2 mb-3">
+    @for($w=1; $w <= $totalWeeks; $w++)
+      <a href="{{ request()->fullUrlWithQuery(['week' => $w]) }}"
+         class="px-3 py-1 rounded-full text-xs border
+                {{ $week === $w ? 'bg-black text-white border-black' : 'bg-white text-black/70 border-gray-300 hover:bg-gray-50' }}"
+         data-week-link
+         data-week="{{ $w }}">
+        Week {{ $w }}
+      </a>
+    @endfor
+  </div>
+
+  @if($assignments->isEmpty())
+    <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
+      <p class="text-sm text-gray-500">
+        Er is nog geen trainingsschema beschikbaar voor
+        {{ $totalWeeks > 1 ? 'week ' . $week : '' }}.
+      </p>
+    </div>
+  @else
+    <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
+      <div class="text-sm text-black font-semibold opacity-50 mb-4">
+        Schema voor week {{ $week }}
+      </div>
+
+      @foreach($daysMap as $key => $label)
+        <div class="mb-4">
+          <h3 class="text-sm font-semibold mb-2 opacity-50">{{ $label }}</h3>
+          <div class="flex flex-col gap-2">
+            @forelse($sortedForDay($key) as $a)
+              @php $trainingCard = $a->card; @endphp
+
+              @if($trainingCard)
+                <div class="p-5 bg-white rounded-3xl border border-gray-300">
+                  <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                    {{ $trainingCard->title }}
+                  </h4>
+
+                  @foreach($trainingCard->blocks as $block)
+                    <div class="{{ !$loop->first ? 'mt-4' : '' }}">
+                      <span class="text-[10px] {{ $block->badge_classes }} font-semibold px-2 py-1 rounded">
+                        {{ $block->label }}
+                      </span>
+                      <ul class="text-xs text-black font-medium mt-2 flex flex-col gap-2">
+                        @foreach($block->items as $item)
+                          <li class="flex items-center justify-between">
+                            <span class="max-w-[50%]">{!! $item->left_html !!}</span>
+                            @if(!empty($item->right_text))
+                              <span class="text-gray-500 font-semibold">{{ $item->right_text }}</span>
+                            @endif
+                          </li>
+                        @endforeach
+                      </ul>
+                    </div>
+                  @endforeach
+                </div>
+              @else
+                <div class="p-5 bg-white rounded-3xl border border-gray-300">
+                  <div class="text-sm font-semibold mb-1">Training #{{ $a->training_card_id }}</div>
+                  <div class="text-xs text-gray-500">Kaart niet gevonden</div>
+                </div>
+              @endif
+            @empty
+              <div class="p-5 bg-gray-100 rounded-3xl border border-gray-200 text-xs text-gray-500 italic">
+                Geen training
+              </div>
+            @endforelse
+          </div>
+        </div>
+      @endforeach
+    </div>
+  @endif
+</div>
 
 <h2 class="text-lg font-bold mb-2">Informatie</h2>
 <section class="grid gap-4 grid-cols-1">

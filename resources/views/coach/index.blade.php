@@ -7,20 +7,20 @@
 
 <h2 class="text-lg font-bold mb-2">Snelkoppelingen</h2>
 <div class="grid gap-3 grid-cols-1 sm:grid-cols-3 mb-6">
-    <a href="#"
+    <a href="{{ url('/coach/threads') }}"
        class="p-4 bg-[#c8ab7a] hover:bg-[#a89067] transition duration-300 rounded">
         <div class="font-semibold text-white">Alle gesprekken</div>
         <p class="text-sm text-white">Bekijk en beantwoord gesprekken</p>
     </a>
-    <a href="#"
+    <a href="{{ url('/coach/claim-clients') }}"
        class="p-4 bg-[#c8ab7a] hover:bg-[#a89067] transition duration-300 rounded">
         <div class="font-semibold text-white">Ongeclaimde clients</div>
         <p class="text-sm text-white">Claim nieuwe aanmeldingen</p>
     </a>
-    <a href="#"
+    <a href="{{ url('/coach/clients') }}"
        class="p-4 bg-[#c8ab7a] hover:bg-[#a89067] transition duration-300 rounded">
-        <div class="font-semibold text-white">Trainingsplannen</div>
-        <p class="text-sm text-white">Overzicht van alle plannen</p>
+        <div class="font-semibold text-white">Mijn klanten</div>
+        <p class="text-sm text-white">Bekijk alle klanten die aan jou gekoppeld zijn</p>
     </a>
 </div>
 

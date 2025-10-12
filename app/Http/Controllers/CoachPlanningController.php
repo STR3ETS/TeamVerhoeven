@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\TrainingAssignment;
+use App\Models\TrainingSection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -15,10 +17,105 @@ class CoachPlanningController extends Controller
     /**
      * Maak pagina + laad catalogus uit TXT naar $library
      */
-    public function create(User $client)
+    public function create(Request $request, User $client)
     {
-        $library = $this->loadLibraryFromTxt(); // array met items
-        return view('coach.planning.create', compact('client', 'library'));
+        $sections = TrainingSection::with(['cards.blocks.items'])
+            ->orderBy('sort_order')
+            ->get();
+
+        $totalWeeks = (int) optional($client->clientProfile)->period_weeks ?: 12;
+
+        $week = (int) $request->integer('week', 1);
+        if ($week < 1 || $week > $totalWeeks) $week = 1;
+
+        $assignments = TrainingAssignment::query()
+            ->where('user_id', $client->id)
+            ->where('week', $week)
+            ->orderByRaw("FIELD(day,'mon','tue','wed','thu','fri','sat','sun')")
+            ->orderBy('sort_order')
+            ->get(['id','day','training_card_id','sort_order'])
+            ->map(fn($a) => [
+                'assignment_id'    => (int) $a->id,
+                'day'              => $a->day,
+                'training_card_id' => (int) $a->training_card_id,
+                'sort_order'       => (int) ($a->sort_order ?? 0),
+            ]);
+
+        return view('coach.planning.create', [
+            'client'       => $client->load('clientProfile'),
+            'sections'     => $sections,
+            'assignments'  => $assignments,
+            'week'         => $week,
+            'totalWeeks'   => $totalWeeks,
+        ]);
+    }
+
+    public function assign(Request $request, User $client)
+    {
+        $totalWeeks = (int) optional($client->clientProfile)->period_weeks ?: 12;
+
+        $data = $request->validate([
+            'card_id' => ['required','exists:training_cards,id'],
+            'day'     => ['required','in:mon,tue,wed,thu,fri,sat,sun'],
+            'week'    => ['required','integer','min:1','max:'.$totalWeeks],
+        ]);
+
+        $order = (int) TrainingAssignment::where('user_id',$client->id)
+            ->where('day',$data['day'])
+            ->where('week',$data['week'])
+            ->max('sort_order') + 1;
+
+        $assignment = TrainingAssignment::create([
+            'user_id'          => $client->id,
+            'training_card_id' => $data['card_id'],
+            'day'              => $data['day'],
+            'week'             => $data['week'],
+            'sort_order'       => $order,
+        ]);
+
+        return response()->json([
+            'ok'            => true,
+            'assignment_id' => $assignment->id,
+        ]);
+    }
+
+    public function unassign(Request $request, User $client)
+    {
+        $data = $request->validate([
+            'assignment_id' => ['required','exists:training_assignments,id'],
+        ]);
+        TrainingAssignment::where('id',$data['assignment_id'])
+            ->where('user_id',$client->id)
+            ->delete();
+        return response()->json(['ok' => true]);
+    }
+
+    public function reorder(Request $request, User $client)
+    {
+        $data = $request->validate([
+            'day'   => ['required','in:mon,tue,wed,thu,fri,sat,sun'],
+            'week'  => ['required','integer','min:1'],
+            'order' => ['required','array','min:1'],
+            'order.*' => ['integer','exists:training_assignments,id'],
+        ]);
+
+        // optioneel extra beveiliging: check dat de ids inderdaad bij deze client/week/dag horen
+        $ids = $data['order'];
+        $existing = TrainingAssignment::whereIn('id',$ids)
+            ->where('user_id',$client->id)
+            ->where('day',$data['day'])
+            ->where('week',$data['week'])
+            ->pluck('id')
+            ->all();
+
+        // alleen de valide ids in volgorde updaten
+        $pos = 1;
+        foreach ($ids as $id) {
+            if (in_array($id, $existing, true)) {
+                TrainingAssignment::where('id',$id)->update(['sort_order' => $pos++]);
+            }
+        }
+        return response()->json(['ok' => true]);
     }
 
     /**

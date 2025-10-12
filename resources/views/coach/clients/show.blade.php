@@ -164,19 +164,158 @@
   <h2 class="text-lg font-bold mb-2">Takenlijst</h2>
   @include('coach.clients.partials.todos', ['client' => $client])
 
-  <!-- <h2 class="text-lg font-bold mb-2">Planning</h2>
-  <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
-    <div class="flex flex-col gap-4 items-start">
-      <p class="text-sm text-gray-500">Nog geen planning gemaakt voor {{ $client->name }}</p>
-      <a href="{{ route('coach.clients.planning.create', $client) }}" class="w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
-          Planning maken
+  @php
+  // Week-setup (één keer centraal)
+  $profile    = $client->clientProfile;
+  $totalWeeks = max(1, (int)($profile->period_weeks ?? 1));
+  $week       = (int) request('week', 1);
+  if ($week < 1 || $week > $totalWeeks) { $week = 1; }
+@endphp
+<h2 class="text-lg font-bold mb-2">Planning</h2>
+<div id="planning-root" data-current-week="{{ $week }}">
+  @php
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Schema;
+
+    // Heeft assignments-tabel een 'week' kolom?
+    $hasWeekCol  = Schema::hasColumn('training_assignments', 'week');
+
+    // Day labels + volgorde
+    $daysMap = [
+      'mon' => 'Maandag','tue' => 'Dinsdag','wed' => 'Woensdag',
+      'thu' => 'Donderdag','fri' => 'Vrijdag','sat' => 'Zaterdag','sun' => 'Zondag',
+    ];
+
+    // Phase-rank zoals in je planner (server-side)
+    $phaseRank = function (?string $phaseLike) {
+        $p = Str::lower($phaseLike ?? '');
+        if (Str::contains($p, 'warm')) return 0;
+        if (Str::contains($p, ['activ','mobil'])) return 1;
+        if (Str::contains($p, ['main','run','hyrox','streng','erg','core'])) return 2;
+        if (Str::contains($p, 'finish')) return 3;
+        if (Str::contains($p, 'cool')) return 4;
+        return 2;
+    };
+
+    // Laad assignments incl. volledige kaartstructuur (voor identieke render)
+    $assignments = \App\Models\TrainingAssignment::query()
+        ->where('user_id', $client->id)
+        ->when($hasWeekCol, fn($q) => $q->where('week', $week))
+        ->with(['card.section','card.blocks.items'])
+        ->orderByRaw("FIELD(day,'mon','tue','wed','thu','fri','sat','sun')")
+        ->orderBy('sort_order')
+        ->get();
+
+    // Groepeer per dag
+    $byDay = $assignments->groupBy('day');
+
+    // Helper: gesorteerde items per dag (phase-rank -> sort_order -> id)
+    $sortedForDay = function ($key) use ($byDay, $phaseRank) {
+        return ($byDay[$key] ?? collect())->sort(function($a, $b) use ($phaseRank) {
+            $aPhase = optional($a->card?->section)->name;
+            $bPhase = optional($b->card?->section)->name;
+            $ra = $phaseRank($aPhase);
+            $rb = $phaseRank($bPhase);
+
+            // tuple-vergelijk: phase rank, sort_order, id
+            return [$ra, (int)($a->sort_order ?? 0), (int)$a->id]
+                <=> [$rb, (int)($b->sort_order ?? 0), (int)$b->id];
+        });
+    };
+  @endphp
+
+  {{-- Week selector --}}
+  <div class="flex flex-wrap gap-2 mb-3">
+    @for($w=1; $w <= $totalWeeks; $w++)
+      <a href="{{ route('coach.clients.show', [$client, 'week' => $w]) }}"
+        class="px-3 py-1 rounded-full text-xs border {{ $week === $w ? 'bg-black text-white border-black' : 'bg-white text-black/70 border-gray-300 hover:bg-gray-50' }}"
+        data-week-link
+        data-week="{{ $w }}">
+        Week {{ $w }}
       </a>
+    @endfor
+  </div>
+
+  @if($assignments->isEmpty())
+    {{-- Lege staat voor geselecteerde week --}}
+    <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
+      <div class="flex flex-col gap-4 items-start">
+        <p class="text-sm text-gray-500">
+          Nog geen planning gemaakt voor
+          {{ $totalWeeks > 1 ? 'week ' . $week : '' }} <span class="block lg:hidden font-semibold"><br>Trainingen kunnen alleen gemaakt worden via de computer</span>
+        </p>
+        <a href="{{ route('coach.clients.trainingplan', [$client, 'week' => $week]) }}"
+          class="hidden lg:block w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
+          Planning maken
+        </a>
+      </div>
     </div>
-  </div> -->
+  @else
+    {{-- Schema met identieke kaart-opmaak als bibliotheek + server-side sorting --}}
+    <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div class="text-sm text-black font-semibold opacity-50">
+          Huidig schema (week {{ $week }}) <span class="block lg:hidden font-semibold"><br>Trainingen kunnen alleen bewerkt worden via de computer</span>
+        </div>
+        <a href="{{ route('coach.clients.trainingplan', [$client, 'week' => $week]) }}"
+          class="hidden lg:block w-full sm:w-auto px-4 py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded">
+          Bewerken
+        </a>
+      </div>
 
+      @foreach($daysMap as $key => $label)
+        <div class="mb-4">
+          <h3 class="text-sm font-semibold mb-2 opacity-50">{{ $label }}</h3>
+          <div class="flex flex-col gap-2">
+            @forelse($sortedForDay($key) as $a)
+              @php $card = $a->card; @endphp
 
-  <h2 class="text-lg font-bold mb-2">Informatie</h2>
-  <section class="grid gap-4 grid-cols-1">
+              @if($card)
+                {{-- IDENTIEK aan bibliotheekkaart (zonder drag) --}}
+                <div class="p-5 bg-white rounded-3xl border border-gray-300 group">
+                  <h2 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                    {{ $card->title }}
+                  </h2>
+
+                  @foreach($card->blocks as $block)
+                    <div class="{{ !$loop->first ? 'mt-4' : '' }}">
+                      <span class="text-[10px] {{ $block->badge_classes }} font-semibold px-2 py-1 rounded">
+                        {{ $block->label }}
+                      </span>
+                      <ul class="text-xs text-black font-medium mt-2 flex flex-col gap-2">
+                        @foreach($block->items as $item)
+                          <li class="flex items-center justify-between">
+                            <span class="max-w-[50%]">{!! $item->left_html !!}</span>
+                            @if(!empty($item->right_text))
+                              <span class="text-gray-500 font-semibold">{{ $item->right_text }}</span>
+                            @endif
+                          </li>
+                        @endforeach
+                      </ul>
+                    </div>
+                  @endforeach
+                </div>
+              @else
+                {{-- Fallback als kaart ontbreekt --}}
+                <div class="p-5 bg-white rounded-3xl border border-gray-300">
+                  <div class="text-sm font-semibold mb-1">Training #{{ $a->training_card_id }}</div>
+                  <div class="text-xs text-gray-500">Kaart niet gevonden</div>
+                </div>
+              @endif
+            @empty
+              <div class="p-5 bg-gray-100 rounded-3xl border border-gray-200 text-xs text-gray-500 italic">
+                Geen training
+              </div>
+            @endforelse
+          </div>
+        </div>
+      @endforeach
+    </div>
+  @endif
+</div>
+
+    <h2 class="text-lg font-bold mb-2">Informatie</h2>
+  <section class="grid gap-4 grid-cols-1 mb-8">
     <div class="p-5 bg-white rounded-3xl border border-gray-300">
       <div class="text-sm text-black font-semibold opacity-50 mb-2">Overzicht te realiseren tijden bij intervaltraining</div>
       <div class="overflow-x-auto rounded-2xl border border-gray-200">
@@ -338,4 +477,69 @@
     </div>
   </div>
 </section>
+
+@push('scripts')
+@verbatim
+<script>
+(function () {
+  const rootId = 'planning-root';
+
+  function bindWeekLinks(scope) {
+    const container = scope || document;
+    container.querySelectorAll('a[data-week-link]').forEach(a => {
+      a.addEventListener('click', function (e) {
+        // Ctrl/cmd-click of middelklik laat nieuwe tab gewoon toe
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+        e.preventDefault();
+        loadPlanning(a.href, { push: true });
+      }, { once: true }); // na replace binden we opnieuw, dus once voorkomt dubbele handlers
+    });
+  }
+
+  async function loadPlanning(url, { push = false, replace = false } = {}) {
+    const current = document.getElementById(rootId);
+    if (!current) { window.location.href = url; return; }
+
+    // kleine visual cue (optional maar fijn)
+    current.style.opacity = '0.6';
+
+    try {
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) throw new Error('Network response was not ok');
+      const html = await res.text();
+      const doc  = new DOMParser().parseFromString(html, 'text/html');
+      const fresh = doc.getElementById(rootId);
+      if (!fresh) { window.location.href = url; return; }
+
+      // vervang uitsluitend het planning-deel
+      current.replaceWith(fresh);
+
+      // url & history bijwerken
+      if (push)      history.pushState({}, '', url);
+      else if (replace) history.replaceState({}, '', url);
+
+      // week-links opnieuw binden binnen het nieuwe fragment
+      bindWeekLinks(fresh);
+
+      // scrollpositie behouden: geen scroll-to-top
+    } catch (err) {
+      // failover: doe gewone navigatie
+      window.location.href = url;
+    } finally {
+      const node = document.getElementById(rootId);
+      if (node) node.style.opacity = '1';
+    }
+  }
+
+  // init: week-links binden
+  bindWeekLinks(document);
+
+  // back/forward ondersteunt
+  window.addEventListener('popstate', function () {
+    loadPlanning(location.href, { push: false, replace: true });
+  });
+})();
+</script>
+@endverbatim
+@endpush
 @endsection
