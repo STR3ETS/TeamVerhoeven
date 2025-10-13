@@ -19,6 +19,7 @@ class CoachesSeeder extends Seeder
             ['name' => 'Eline', 'email' => 'eline@example.com'],
             ['name' => 'Nicky', 'email' => 'nicky@example.com'],
             ['name' => 'Roy',   'email' => 'roy@example.com'],
+            ['name' => 'Roy',   'email' => 'raphael@eazyonline.nl'],
         ];
 
         foreach ($coaches as $c) {
