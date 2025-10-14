@@ -2396,4 +2396,254 @@ return [
         ],
       ],
     ],
+    [
+      'section' => 'Herstel (Knie/Heup/Rug)',
+      'cards' => [
+
+        // Training 1
+        [
+          'title' => 'Isometrische warming-up + knieherstel (Patellapees / “pace-pijn”) – Variant A',
+          'blocks' => [
+            [
+              'label' => 'Doel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Pijnvermindering, peesactivatie, excentrische krachtopbouw', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Benodigd',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Weerstandsband, dumbbells (optioneel), muur', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Isometrische warming-up (3 sets)',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Lichte fietsactivatie (RPE 3)', 'right' => '5–10 minuten'],
+                ['left' => '- Wall Sit', 'right' => '3 × 45 sec'],
+                ['left' => '- Isometrische Leg Extension (knie 60° buiging, tegen band) per been', 'right' => '3 × 30 sec'],
+                ['left' => '- Glute Bridge Hold', 'right' => '3 × 40 sec'],
+              ],
+            ],
+            [
+              'label' => 'Hoofddeel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- (1) Single-Leg Excentrische Squat (op box/bankje) – 3 sec zakken, met 2 benen omhoog', 'right' => '3 × 10 per been'],
+                ['left' => '- (2) Knee-Banded Extension (staand) – gecontroleerde extensie', 'right' => '3 × 12 per been'],
+                ['left' => '- (3) Wall Sit met mini-pulsen (5 sec hold, 3 pulsen)', 'right' => '3 × 40 sec'],
+                ['left' => '- (4) Bulgarian Split Squat (opbouwen met dumbbells)', 'right' => '3 × 8 per been'],
+              ],
+            ],
+            [
+              'label' => 'Cooling-down',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Lichte fietsactivatie (RPE 4)', 'right' => '5–10 minuten'],
+                ['left' => '- Kuit- en quadricepsstretch per zijde', 'right' => '2 × 30 sec'],
+              ],
+            ],
+          ],
+        ],
+
+        // Training 2
+        [
+          'title' => 'Isometrische warming-up + knieherstel – Variant B',
+          'blocks' => [
+            [
+              'label' => 'Doel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Kracht, stabiliteit en peesweerstand opbouwen', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Benodigd',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Step/box, weerstandsband, dumbbells', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Isometrische warming-up (3 sets)',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Spanish Squat Hold (band achter knieën)', 'right' => '3 × 40 sec'],
+                ['left' => '- Glute Bridge March Hold', 'right' => '3 × 30 sec'],
+                ['left' => '- Wall Sit met enkel lichte druk (hand tegen muur)', 'right' => '3 × 45 sec'],
+              ],
+            ],
+            [
+              'label' => 'Hoofddeel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- (1) Excentrische Step-Down – langzaam zakken 3–4 sec', 'right' => '3 × 10 per been'],
+                ['left' => '- (2) Knee-Banded Terminal Extensions', 'right' => '3 × 15 per been'],
+                ['left' => '- (3) Bulgarian Split Squat (progressief, evt. 2×5–10 kg)', 'right' => '4 × 8'],
+                ['left' => '- (4) Wall Sit Iso Hold', 'right' => '3 × 45–60 sec'],
+              ],
+            ],
+            [
+              'label' => 'Cooling-down',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Uitfietsen (lichte weerstand)', 'right' => '8 minuten'],
+                ['left' => '- Quadriceps foamrollen per been', 'right' => '2 minuten'],
+              ],
+            ],
+          ],
+        ],
+
+        // Training 3
+        [
+          'title' => 'Piriformis (heup) herstel & mobiliteit',
+          'blocks' => [
+            [
+              'label' => 'Doel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Spanning verminderen piriformis, heupmobiliteit vergroten', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Benodigd',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Weerstandsband, mat, (optioneel) foamroller', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Warming-up (2 rondes)',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Cat-Cow mobiliteit', 'right' => '10 herhalingen'],
+                ['left' => '- Dynamic Figure-4 stretch', 'right' => '10 per zijde'],
+                ['left' => '- Glute Bridge Hold', 'right' => '3 × 30 sec'],
+              ],
+            ],
+            [
+              'label' => 'Hoofddeel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Banded Glute Activation (monster walks)', 'right' => '3 × 15 stappen per kant'],
+                ['left' => '- 90/90 Rotaties (heupmobiliteit)', 'right' => '3 × 10 langzaam'],
+                ['left' => '- Piriformis Stretch per zijde', 'right' => '2 × 45 sec'],
+                ['left' => '- Single-Leg Glute Bridge', 'right' => '3 × 12 per been'],
+                ['left' => '- Banded External Rotations (staand) per zijde', 'right' => '3 × 15'],
+              ],
+            ],
+            [
+              'label' => 'Cooling-down',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Piriformis & heupstretch', 'right' => '2 × 45 sec'],
+                ['left' => '- Ademhalingsoefening in lig', 'right' => '3 minuten'],
+              ],
+            ],
+          ],
+        ],
+
+        // Training 4
+        [
+          'title' => 'Hersteltraining glutes & onderrug – Variant A',
+          'blocks' => [
+            [
+              'label' => 'Doel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Doorbloeding, ontspanning en lichte activatie bil- en rompspieren', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Benodigd',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Weerstandsband, mat', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Warming-up (2 rondes)',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Bird Dog', 'right' => '10 per kant'],
+                ['left' => '- Glute Bridge', 'right' => '15 herhalingen'],
+                ['left' => '- Standing Hip Circles', 'right' => '10 per kant'],
+              ],
+            ],
+            [
+              'label' => 'Hoofddeel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Banded Glute Kickbacks', 'right' => '3 × 15 per been'],
+                ['left' => '- Superman Hold', 'right' => '3 × 30 sec'],
+                ['left' => '- Banded Hip Thrusts', 'right' => '3 × 12'],
+                ['left' => '- Side-Lying Clamshells', 'right' => '3 × 15 per kant'],
+                ['left' => '- Wall Sit met heupdruk (mini-band om knieën)', 'right' => '3 × 40 sec'],
+              ],
+            ],
+            [
+              'label' => 'Cooling-down',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Child’s pose + lower back twist stretch per zijde', 'right' => '2 × 30 sec'],
+              ],
+            ],
+          ],
+        ],
+
+        // Training 5
+        [
+          'title' => 'Hersteltraining glutes & onderrug – Variant B',
+          'blocks' => [
+            [
+              'label' => 'Doel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Actieve ontspanning + core-stabiliteit', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Benodigd',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Mat, lichte band, (optioneel) swiss ball', 'right' => ''],
+              ],
+            ],
+            [
+              'label' => 'Warming-up (2 rondes)',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Cat-Cow', 'right' => '10×'],
+                ['left' => '- Glute Bridge Hold', 'right' => '30 sec'],
+                ['left' => '- Standing Good Morning (BW)', 'right' => '10×'],
+              ],
+            ],
+            [
+              'label' => 'Hoofddeel',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Hip Thrust (lichte weerstand)', 'right' => '3 × 15'],
+                ['left' => '- Reverse Lunge to Knee Drive', 'right' => '3 × 10 per been'],
+                ['left' => '- Banded Monster Walks', 'right' => '3 × 12 stappen per kant'],
+                ['left' => '- Dead Bug', 'right' => '3 × 12–15'],
+                ['left' => '- Side Plank Hold per kant', 'right' => '3 × 30 sec'],
+                ['left' => '- Copenhagen Plank Hold per kant', 'right' => '3 × 30 sec'],
+              ],
+            ],
+            [
+              'label' => 'Cooling-down',
+              'badge_classes' => 'text-violet-700 bg-violet-100 border border-violet-200',
+              'items' => [
+                ['left' => '- Knees-to-chest stretch', 'right' => '2 × 45 sec'],
+                ['left' => '- Piriformis stretch per kant', 'right' => '3 × 30 sec'],
+              ],
+            ],
+          ],
+        ],
+
+      ],
+    ],
 ];
