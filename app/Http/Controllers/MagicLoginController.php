@@ -71,12 +71,14 @@ class MagicLoginController extends Controller
             $this->sendLoginCodeViaMailchimp(
                 email: $user->email,
                 mergeFields: $merge,
-                tagName: env('MAILCHIMP_LOGIN_TAG', 'Login: Code') // → zet eventueel in .env
+                tagName: env('MAILCHIMP_LOGIN_TAG', 'Login: Code')
             );
 
         } catch (\Throwable $e) {
-            Log::warning('[Login] Mailchimp versturen mislukt', ['email' => $user->email, 'error' => $e->getMessage()]);
-            // We geven nog steeds het generieke antwoord terug.
+            Log::warning('[Login] Mailchimp versturen mislukt (outer catch)', [
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return $generic;
@@ -160,43 +162,67 @@ class MagicLoginController extends Controller
     }
 
     /**
-     * Upsert contact + merge fields, verwijder tag (als aanwezig) en voeg hem daarna (weer) toe
-     * zodat de Journey op “Contact tagged: <tag>” opnieuw triggert.
+     * Upsert contact + merge fields en (re)tag voor Journey-trigger.
+     * Met robuuste logging + mini delay zodat Mailchimp de tag-wissel ziet.
      */
     private function sendLoginCodeViaMailchimp(string $email, array $mergeFields, string $tagName): void
     {
         $listId = env('MAILCHIMP_AUDIENCE_ID');
         if (!$listId || !$email) {
-            Log::warning('[Login] Mailchimp niet geconfigureerd (audience of email ontbreekt)');
+            Log::warning('[Login] Mailchimp misconfig: audience of email ontbreekt', [
+                'listId' => $listId,
+                'email'  => $email,
+            ]);
             return;
         }
 
         $mc = $this->mc();
         $subscriberHash = md5(strtolower($email));
 
-        // 1) Upsert met merge fields
-        $member = $mc->lists->setListMember($listId, $subscriberHash, [
-            'email_address' => $email,
-            'status_if_new' => 'subscribed',
-            'status'        => 'subscribed',
-            'merge_fields'  => $mergeFields,
-        ]);
-        Log::info('[Login/Mailchimp] setListMember ok', ['email' => $email, 'id' => $member->id ?? null]);
+        try {
+            // 1) Upsert (maak aan of update) als SUBSCRIBED met merge fields
+            $member = $mc->lists->setListMember($listId, $subscriberHash, [
+                'email_address' => $email,
+                'status_if_new' => 'subscribed',
+                'status'        => 'subscribed',
+                'merge_fields'  => $mergeFields,
+            ]);
+            Log::info('[Login/Mailchimp] upsert OK', [
+                'email'     => $email,
+                'member_id' => $member->id ?? null,
+                'status'    => $member->status ?? null,
+            ]);
 
-        // 2) Tag OFF (deactivate) → sommige journeys her-triggeren pas als de tag opnieuw ACTIVE wordt
-        $mc->lists->updateListMemberTags($listId, $subscriberHash, [
-            'tags' => [
-                ['name' => $tagName, 'status' => 'inactive'],
-            ],
-        ]);
-        Log::info('[Login/Mailchimp] tag inactive gezet', ['email' => $email, 'tag' => $tagName]);
+            // 2) Klein “pulse”-moment zodat active straks als echte wijziging telt
+            // (direct inactive->active kan soms als 1 event samenvallen)
+            $mc->lists->updateListMemberTags($listId, $subscriberHash, [
+                'tags' => [[ 'name' => $tagName, 'status' => 'inactive' ]],
+            ]);
+            usleep(400000); // 0.4s
 
-        // 3) Tag ON (activate) → triggert je Journey
-        $mc->lists->updateListMemberTags($listId, $subscriberHash, [
-            'tags' => [
-                ['name' => $tagName, 'status' => 'active'],
-            ],
-        ]);
-        Log::info('[Login/Mailchimp] tag active gezet', ['email' => $email, 'tag' => $tagName]);
+            // 3) Active = trigger de Journey
+            $mc->lists->updateListMemberTags($listId, $subscriberHash, [
+                'tags' => [[ 'name' => $tagName, 'status' => 'active' ]],
+            ]);
+            Log::info('[Login/Mailchimp] tag pulsed to active', ['email' => $email, 'tag' => $tagName]);
+
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            // Mailchimp 4xx: body bevat de echte reden (cleaned/forgotten/compliance/unsubscribed, etc.)
+            $status = $e->getResponse()?->getStatusCode();
+            $body   = (string) $e->getResponse()?->getBody();
+            Log::warning('[Login] Mailchimp 4xx', [
+                'email'  => $email,
+                'status' => $status,
+                'body'   => $body,
+            ]);
+            // Optioneel: rethrow om in logs/prometheus op te vallen
+            // throw $e;
+        } catch (\Throwable $e) {
+            Log::warning('[Login] Mailchimp error', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+            // throw $e; // optioneel
+        }
     }
 }
