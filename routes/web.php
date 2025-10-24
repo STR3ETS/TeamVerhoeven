@@ -15,7 +15,7 @@ use App\Models\AccessKey;
 Route::get('/', function () { return view('welcome'); });
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [MagicLoginController::class, 'show'])->name('login.show');
+    Route::get('/login', [MagicLoginController::class, 'show'])->name('login');
     Route::post('/login/request', [MagicLoginController::class, 'requestCode'])
         ->middleware('throttle:5,1')->name('login.request');
     Route::post('/login/verify', [MagicLoginController::class, 'verifyCode'])
