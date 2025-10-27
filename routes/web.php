@@ -30,10 +30,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/clients',                             [CoachClientController::class, 'index'])->name('clients.index');
         Route::get('/clients/{client}',                    [CoachClientController::class, 'show'])->name('clients.show');
         Route::get('/clients/{client}/intake',             [CoachClientController::class, 'intake'])->name('clients.intake');
-        Route::get('/clients/{client}/trainingplan', [CoachPlanningController::class, 'create'])->name('clients.trainingplan');
+        Route::get('/clients/{client}/trainingplan',       [CoachPlanningController::class, 'create'])->name('clients.trainingplan');
         Route::post('/clients/{client}/planning/assign',   [CoachPlanningController::class, 'assign'])->name('clients.planning.assign');
         Route::post('/clients/{client}/planning/unassign', [CoachPlanningController::class, 'unassign'])->name('clients.planning.unassign');
-        Route::post('/clients/{client}/planning/reorder', [CoachPlanningController::class, 'reorder'])->name('clients.planning.reorder');
+        Route::post('/clients/{client}/planning/reorder',  [CoachPlanningController::class, 'reorder'])->name('clients.planning.reorder');
         Route::post('/clients/{client}/planning/generate', [CoachPlanningController::class, 'generate'])->name('clients.planning.generate')->whereNumber('client');
         Route::get('/claim-clients',                       [CoachClientController::class, 'claim'])->name('clients.claim');
         Route::post('/claim-clients/{profile}',            [CoachClientController::class, 'claimStore'])->name('clients.claim.store');
