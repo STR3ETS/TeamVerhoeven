@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // ✅ Alias toevoegen
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserRole::class,
+            'intake.complete' => \App\Http\Middleware\EnsureIntakeComplete::class,
         ]);
 
         // Eventueel kun je hier ook group-aanpassingen doen:

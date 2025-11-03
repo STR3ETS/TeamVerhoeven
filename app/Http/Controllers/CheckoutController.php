@@ -638,28 +638,69 @@ class CheckoutController extends Controller
      */
     public function progress(Request $request)
     {
-        // 1) Draft uit sessie
-        $intakeId = (int) session('draft_intake_id', 0);
-        if (!$intakeId) {
-            Log::info('[intake.progress] no draft_intake_id in session – noop', ['ip' => $request->ip()]);
-            return response()->json(['ok' => true]);
+        $user   = $request->user();
+        $intake = null;
+
+        /**
+         * 1) Intake ophalen / maken
+         *    - Als user ingelogd is → Intake koppelen aan die user (client_id = user->id)
+         *    - Anders → oude guest-flow met draft_intake_id uit sessie
+         */
+        if ($user) {
+            $intake = Intake::where('client_id', $user->id)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$intake) {
+                $intake = Intake::create([
+                    'client_id' => $user->id,
+                    'status'    => 'active',
+                    'payload'   => [],
+                ]);
+
+                Log::info('[intake.progress] created new intake for logged-in user', [
+                    'intake_id' => $intake->id,
+                    'user_id'   => $user->id,
+                    'ip'        => $request->ip(),
+                ]);
+            }
+        } else {
+            // OUDE GAST-FLOW (zoals je had)
+            $intakeId = (int) session('draft_intake_id', 0);
+
+            if ($intakeId) {
+                $intake = Intake::find($intakeId);
+                if (!$intake) {
+                    Log::info('[intake.progress] intake not found for draft_intake_id, creating new draft', [
+                        'intake_id' => $intakeId,
+                    ]);
+                }
+            }
+
+            if (!$intake) {
+                $intake = Intake::create([
+                    'client_id' => null,
+                    'status'    => 'active',
+                    'payload'   => [],
+                ]);
+
+                session(['draft_intake_id' => $intake->id]);
+
+                Log::info('[intake.progress] created new draft intake (guest)', [
+                    'intake_id' => $intake->id,
+                    'ip'        => $request->ip(),
+                ]);
+            }
         }
 
-        // 2) Vind intake
-        $intake = Intake::find($intakeId);
-        if (!$intake) {
-            Log::info('[intake.progress] intake not found – noop', ['intake_id' => $intakeId]);
-            return response()->json(['ok' => true]);
-        }
-
-        // 3) Huidige payload
+        // 2) Huidige payload
         $payload = $intake->payload ?? [];
         $payload['profile']   = $payload['profile']   ?? [];
         $payload['goal']      = $payload['goal']      ?? [];
         $payload['run_paces'] = $payload['run_paces'] ?? [];
         $payload['ftp']       = $payload['ftp']       ?? [];
 
-        // 4) Alleen bekende keys mergen
+        // 3) Alleen bekende keys mergen
         $in = $request->all();
 
         foreach ([
@@ -691,21 +732,35 @@ class CheckoutController extends Controller
             }
         }
 
-        // 5) Intake payload opslaan
+        // 4) Intake payload opslaan
         $intake->payload = $payload;
         $intake->save();
 
-        // 6) Spiegel naar ClientProfile ALS intake al aan user hangt
-        if ($intake->client_id) {
-            $profile = ClientProfile::firstOrNew(['user_id' => $intake->client_id]);
+        /**
+         * 5) Spiegel naar ClientProfile
+         *    - ingelogd → user->id
+         *    - fallback: intake->client_id (voor het geval die er al is)
+         */
+        $targetUserId = $user?->id ?? $intake->client_id;
+
+        if ($targetUserId) {
+            $profile = ClientProfile::firstOrNew(['user_id' => $targetUserId]);
 
             // blessures / doelen → arrays
-            if (array_key_exists('injuries', $in)) $profile->injuries = $this->explodeToArray((string) $in['injuries']);
-            if (array_key_exists('goals', $in))    $profile->goals    = $this->explodeToArray((string) $in['goals']);
+            if (array_key_exists('injuries', $in)) {
+                $profile->injuries = $this->explodeToArray((string) $in['injuries']);
+            }
+            if (array_key_exists('goals', $in)) {
+                $profile->goals = $this->explodeToArray((string) $in['goals']);
+            }
 
             // metingen
-            if (array_key_exists('height_cm', $in)) $profile->height_cm = $in['height_cm'] ?: null;
-            if (array_key_exists('weight_kg', $in)) $profile->weight_kg = $in['weight_kg'] ?: null;
+            if (array_key_exists('height_cm', $in)) {
+                $profile->height_cm = $in['height_cm'] ?: null;
+            }
+            if (array_key_exists('weight_kg', $in)) {
+                $profile->weight_kg = $in['weight_kg'] ?: null;
+            }
 
             // frequentie
             if (array_key_exists('max_days_per_week', $in) || array_key_exists('session_minutes', $in)) {
@@ -717,15 +772,24 @@ class CheckoutController extends Controller
             }
 
             // vrije tekst
-            if (array_key_exists('sport_background', $in)) $profile->background = $in['sport_background'] ?: null;
-            if (array_key_exists('facilities', $in))       $profile->facilities = $in['facilities'] ?: null;
-            if (array_key_exists('materials', $in))        $profile->materials  = $in['materials'] ?: null;
-            if (array_key_exists('working_hours', $in))    $profile->work_hours = $in['working_hours'] ?: null;
+            if (array_key_exists('sport_background', $in)) {
+                $profile->background = $in['sport_background'] ?: null;
+            }
+            if (array_key_exists('facilities', $in)) {
+                $profile->facilities = $in['facilities'] ?: null;
+            }
+            if (array_key_exists('materials', $in)) {
+                $profile->materials = $in['materials'] ?: null;
+            }
+            if (array_key_exists('working_hours', $in)) {
+                $profile->work_hours = $in['working_hours'] ?: null;
+            }
 
             // doelwedstrijd → profiel.goal
             $goalKeysPresent = array_key_exists('goal_distance', $in)
                             || array_key_exists('goal_time_hms', $in)
                             || array_key_exists('goal_ref_date', $in);
+
             if ($goalKeysPresent) {
                 $existingGoal = is_array($profile->goal) ? $profile->goal : [];
                 $profile->goal = array_merge($existingGoal, array_filter([

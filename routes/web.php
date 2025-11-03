@@ -12,8 +12,13 @@ use App\Http\Controllers\TrainingLibraryController;
 use Illuminate\Http\Request;
 use App\Models\AccessKey;
 
-Route::get('/', function () { return view('welcome'); });
+Route::get('/', function () {
+    return view('welcome');
+});
 
+/**
+ * Gast-routes (login)
+ */
 Route::middleware('guest')->group(function () {
     Route::get('/login', [MagicLoginController::class, 'show'])->name('login');
     Route::post('/login/request', [MagicLoginController::class, 'requestCode'])
@@ -21,7 +26,19 @@ Route::middleware('guest')->group(function () {
     Route::post('/login/verify', [MagicLoginController::class, 'verifyCode'])
         ->middleware('throttle:10,1')->name('login.verify');
 });
-Route::middleware(['auth'])->group(function () {
+
+/**
+ * Alleen ingelogd (maar intake nog NIET verplicht compleet)
+ * → hier hoort logout thuis
+ */
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [MagicLoginController::class, 'logout'])->name('logout');
+});
+
+/**
+ * Alles dat alleen mag als intake COMPLEET is
+ */
+Route::middleware(['auth', 'intake.complete'])->group(function () {
     Route::prefix('coach')->name('coach.')->middleware('role:coach')->group(function () {
         Route::get('/', fn () => view('coach.index'))->name('index');
         Route::get('/threads',                             [CoachThreadController::class, 'index'])->name('threads.index');
@@ -39,13 +56,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/claim-clients/{profile}',            [CoachClientController::class, 'claimStore'])->name('clients.claim.store');
 
         Route::prefix('clients/{client}/todos')->name('clients.todos.')->group(function () {
-            Route::post('/',            [CoachClientTodoController::class, 'store'])->name('store');           // taak toevoegen
-            Route::patch('/{todo}/toggle', [CoachClientTodoController::class, 'toggle'])->name('toggle');     // afvinken/undo
-            Route::delete('/{todo}',    [CoachClientTodoController::class, 'destroy'])->name('destroy');       // verwijderen
-            Route::patch('/reorder',    [CoachClientTodoController::class, 'reorder'])->name('reorder');       // sorteren
-            Route::patch('/{todo}', [CoachClientTodoController::class, 'update'])->name('update');
+            Route::post('/',                 [CoachClientTodoController::class, 'store'])->name('store');     // taak toevoegen
+            Route::patch('/{todo}/toggle',   [CoachClientTodoController::class, 'toggle'])->name('toggle');   // afvinken/undo
+            Route::delete('/{todo}',         [CoachClientTodoController::class, 'destroy'])->name('destroy'); // verwijderen
+            Route::patch('/reorder',         [CoachClientTodoController::class, 'reorder'])->name('reorder'); // sorteren
+            Route::patch('/{todo}',          [CoachClientTodoController::class, 'update'])->name('update');
         });
     });
+
     Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
         Route::get('/', fn () => view('client.index'))->name('index');
         Route::get('/threads',                [ClientThreadController::class, 'index'])->name('threads.index');
@@ -54,9 +72,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/threads/{thread}',       [ClientThreadController::class, 'show'])->name('threads.show');
         Route::post('/threads/{thread}/msg',  [ClientThreadController::class, 'storeMessage'])->name('threads.messages.store');
     });
-    Route::post('/logout', [MagicLoginController::class, 'logout'])->name('logout');
 });
 
+/**
+ * Intake is altijd bereikbaar (gast + ingelogd),
+ * en standalone t.o.v. intake.complete
+ */
 Route::get('/intake', function (Request $request) {
     if ($request->has('key')) {
         $raw = (string) $request->query('key', '');
@@ -79,12 +100,13 @@ Route::get('/intake', function (Request $request) {
             }
         }
     } else {
-        // ⚠️ Belangrijk: bezoek zonder ?key wist de eerder ingestelde key
+        // ⚠️ Bezoek zonder ?key wist de eerder ingestelde key
         session()->forget('ak');
     }
 
     return view('intake.index');
 })->name('intake.index');
+
 Route::post('/intake/checkout', [CheckoutController::class, 'create'])->name('intake.checkout');
 Route::post('/intake/checkout/confirm', [CheckoutController::class, 'confirm'])->name('intake.checkout.confirm');
 Route::post('/intake/progress', [CheckoutController::class, 'progress'])->name('intake.progress');
