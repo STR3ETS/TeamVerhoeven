@@ -1,8 +1,14 @@
-{{-- resources/views/coach/planning/create.blade.php --}}
 @extends('layouts.app')
 @section('title', 'Bestaande gegevens – ' . ($client->name ?? 'Cliënt'))
 
 @section('content')
+@php
+  /** @var \Carbon\Carbon|\Illuminate\Support\Carbon|string|null $planStartDate */
+  $planStart = isset($planStartDate)
+      ? \Carbon\Carbon::parse($planStartDate)->startOfWeek(\Carbon\Carbon::MONDAY)
+      : \Carbon\Carbon::now()->startOfWeek(\Carbon\Carbon::MONDAY);
+@endphp
+
 <a href="{{ route('coach.clients.show', $client) }}"
    class="text-xs text-black font-semibold opacity-50 hover:opacity-100 transition duration-300">
   <i class="fa-solid fa-arrow-right-long fa-flip-horizontal fa-sm mr-2"></i>
@@ -17,10 +23,20 @@
 {{-- Week selector --}}
 <div class="flex flex-wrap gap-2 mb-4">
   @for($w=1; $w <= ($totalWeeks ?? 1); $w++)
+    @php
+      // start/eind van deze trainingsweek
+      $weekStart = $planStart->copy()->addWeeks($w - 1);
+      $weekEnd   = $weekStart->copy()->endOfWeek(\Carbon\Carbon::SUNDAY);
+      $calWeek   = $weekStart->isoWeek; // kalenderweeknummer
+    @endphp
+
     <a href="{{ route('coach.clients.trainingplan', [$client, 'week' => $w]) }}"
        class="px-3 py-1 rounded-full text-xs border
               {{ ($week ?? 1) === $w ? 'bg-black text-white border-black' : 'bg-white text-black/70 border-gray-300 hover:bg-gray-50' }}">
+      {{-- Weeknummer training + kalenderweek + datumrange --}}
       Week {{ $w }}
+      · KW {{ $calWeek }}
+      · {{ $weekStart->format('d-m') }} t/m {{ $weekEnd->format('d-m-Y') }}
     </a>
   @endfor
 </div>
@@ -31,7 +47,18 @@
     <h2 class="text-lg font-bold mb-2">Trainingsplan</h2>
     <div class="p-5 bg-white rounded-3xl border border-gray-300">
       <div class="max-h-[60vh] overflow-y-auto">
-        <h3 class="text-sm font-semibold opacity-50 mb-4">Week {{ $week ?? 1 }}</h3>
+        @php
+          $currentWeek  = $week ?? 1;
+          $currentStart = $planStart->copy()->addWeeks($currentWeek - 1);
+          $currentEnd   = $currentStart->copy()->endOfWeek(\Carbon\Carbon::SUNDAY);
+          $currentCalW  = $currentStart->isoWeek;
+        @endphp
+
+        <h3 class="text-sm font-semibold opacity-50 mb-4">
+          Week {{ $currentWeek }}
+          · KW {{ $currentCalW }}
+          · {{ $currentStart->format('d-m') }} t/m {{ $currentEnd->format('d-m-Y') }}
+        </h3>
 
         @php
           $days = [

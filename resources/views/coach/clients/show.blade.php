@@ -165,13 +165,40 @@
   @include('coach.clients.partials.todos', ['client' => $client])
 
   @php
-  // Week-setup (één keer centraal)
-  $profile    = $client->clientProfile;
-  $totalWeeks = max(1, (int)($profile->period_weeks ?? 1));
-  $week       = (int) request('week', 1);
-  if ($week < 1 || $week > $totalWeeks) { $week = 1; }
-@endphp
-<h2 class="text-lg font-bold mb-2">Planning</h2>
+    use Carbon\Carbon;
+
+    // Week-setup (één keer centraal)
+    $profile    = $client->clientProfile;
+    $totalWeeks = max(1, (int)($profile->period_weeks ?? 1));
+    $week       = (int) request('week', 1);
+    if ($week < 1 || $week > $totalWeeks) { $week = 1; }
+
+    // Start van het trainingsplan:
+    // 1) als je ooit een plan_start_date-kolom toevoegt aan client_profiles → eerst daarop
+    // 2) anders, pak de laatste intake.start_date (als die gevuld is)
+    // 3) fallback: huidige week maandag
+    if (!empty($profile?->plan_start_date)) {
+        $planStart = Carbon::parse($profile->plan_start_date)->startOfWeek(Carbon::MONDAY);
+    } else {
+        $latestIntake = $client->intakes()->orderByDesc('start_date')->first();
+        if ($latestIntake && $latestIntake->start_date) {
+            $planStart = Carbon::parse($latestIntake->start_date)->startOfWeek(Carbon::MONDAY);
+        } else {
+            $planStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        }
+    }
+
+    // Huidige trainingsweek uitrekenen
+    $currentStart = $planStart->copy()->addWeeks($week - 1);
+    $currentEnd   = $currentStart->copy()->endOfWeek(Carbon::SUNDAY);
+    $currentCalW  = $currentStart->isoWeek; // kalenderweek
+  @endphp
+  <h2 class="text-lg font-bold mb-1">Planning</h2>
+  <p class="text-xs text-black opacity-60 font-semibold mb-3">
+    Week {{ $week }}
+    · KW {{ $currentCalW }}
+    · {{ $currentStart->format('d-m') }} t/m {{ $currentEnd->format('d-m-Y') }}
+  </p>
 <div id="planning-root" data-current-week="{{ $week }}">
   @php
     use Illuminate\Support\Str;

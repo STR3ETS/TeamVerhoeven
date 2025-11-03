@@ -44,6 +44,7 @@ class CheckoutController extends Controller
             'street'       => 'required|string|max:120',
             'house_number' => 'required|string|max:20',
             'postcode'     => 'required|string|max:20',
+            'start_date'   => 'required|date|after_or_equal:today',
             // stap 1
             'preferred_coach' => 'required|in:roy,eline,nicky,none',
             // stap 2
@@ -169,9 +170,10 @@ class CheckoutController extends Controller
         // 4) Draft Intake + pending Order
         [$intake, $order] = DB::transaction(function () use ($payload, $data, $unitAmountCents) {
             $intake = Intake::create([
-                'client_id' => null,
-                'status'    => 'active',
-                'payload'   => $payload,
+                'client_id'  => null,
+                'status'     => 'active',
+                'payload'    => $payload,
+                'start_date' => $data['start_date'],   // 👈 HIER OPSLAAN
             ]);
 
             $order = Order::create([

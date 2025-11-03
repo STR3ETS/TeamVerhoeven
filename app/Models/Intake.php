@@ -14,11 +14,13 @@ class Intake extends Model
         'status',
         'payload',
         'completed_at',
+        'start_date',
     ];
 
     protected $casts = [
         'payload'      => 'array',
         'completed_at' => 'datetime',
+        'start_date' => 'date',
     ];
 
     public function client()

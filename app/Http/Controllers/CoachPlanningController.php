@@ -41,12 +41,24 @@ class CoachPlanningController extends Controller
                 'sort_order'       => (int) ($a->sort_order ?? 0),
             ]);
 
+        // 👉 Startdatum voor het trainingsplan:
+        // pas 'plan_start_date' aan naar jouw kolomnaam indien anders.
+        $activeIntake = $client->intakes()
+            ->whereNotNull('start_date')
+            ->orderByDesc('created_at')
+            ->first();
+
+        $planStartDate = $activeIntake && $activeIntake->start_date
+            ? Carbon::parse($activeIntake->start_date)->startOfWeek(Carbon::MONDAY)
+            : Carbon::now()->startOfWeek(Carbon::MONDAY);
+
         return view('coach.planning.create', [
-            'client'       => $client->load('clientProfile'),
-            'sections'     => $sections,
-            'assignments'  => $assignments,
-            'week'         => $week,
-            'totalWeeks'   => $totalWeeks,
+            'client'        => $client,
+            'sections'      => $sections,
+            'assignments'   => $assignments,
+            'week'          => $week,
+            'totalWeeks'    => $totalWeeks,
+            'planStartDate' => $planStartDate,
         ]);
     }
 

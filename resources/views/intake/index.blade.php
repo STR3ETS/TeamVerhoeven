@@ -122,6 +122,14 @@
                    :class="errors.dob ? 'border-red-500 focus:border-red-500' : ''">
           </div>
 
+          <div>
+            <p class="text-sm font-medium text-black mb-1">Wanneer wil je beginnen?</p>
+            <input id="start_date" type="date" name="start_date" x-model="form.start_date" required
+                  class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
+                          border-gray-300 hover:border-[#c7c7c7]"
+                  :class="errors.start_date ? 'border-red-500 focus:border-red-500' : ''">
+          </div>
+
           <!-- Adres -->
           <div>
             <p class="text-sm font-medium text-black mb-2">Wat is je adres?</p>
@@ -1075,7 +1083,7 @@
 
       form: {
         // stap 0
-        name:'', email:'', phone:'', dob:'', gender:'',
+        name:'', email:'', phone:'', dob:'', start_date:'', gender:'',
         street:'', house_number:'', postcode:'',
         // stap 1/2
         preferred_coach:'',
@@ -1196,7 +1204,7 @@
         // Debounced autosave
         this._saveDebounced=this.debounce(()=>this.saveState(), 200);
         this.$watch('form', ()=>this._saveDebounced(), { deep:true });
-        ['name','email','phone','dob','gender','street','house_number','postcode','package','duration','height_cm','weight_kg']
+        ['name','email','phone','dob','start_date','gender','street','house_number','postcode','package','duration','height_cm','weight_kg']
           .forEach(k=>this.$watch(`form.${k}`, ()=>this._saveDebounced()));
         this.$watch('step', (val, oldVal)=>{
           this._saveDebounced();
@@ -1219,6 +1227,38 @@
             const minDate=new Date(today.getFullYear()-80, today.getMonth(), today.getDate());
             const min=minDate.toISOString().split('T')[0];
             el.setAttribute('min',min); el.setAttribute('max',max);
+          }
+          const startEl = document.getElementById('start_date');
+          if (startEl) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // YYYY-MM-DD formatter zonder timezone gedoe
+            const toLocalDateInputValue = (d) => {
+              const y  = d.getFullYear();
+              const m  = String(d.getMonth() + 1).padStart(2, '0');
+              const dd = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${dd}`;
+            };
+
+            // 1) alles vóór vandaag blokkeren
+            const minStr = toLocalDateInputValue(today);
+            startEl.setAttribute('min', minStr);
+
+            // 2) eerste maandag vanaf vandaag
+            const day = today.getDay(); // 0=zo, 1=ma, ...
+            const offset = (1 - day + 7) % 7;
+            const firstMonday = new Date(today);
+            firstMonday.setDate(today.getDate() + offset);
+            const firstMondayStr = toLocalDateInputValue(firstMonday);
+
+            // ⬇️ BELANGRIJK: model en input gelijk zetten
+            const initial = this.form.start_date || firstMondayStr;
+            this.form.start_date = initial;
+            startEl.value = initial;
+
+            // 3) alleen nog stappen van 7 dagen (alleen maandagen)
+            startEl.setAttribute('step', '7');
           }
           if (this.step===0) this.initTelInput();
           if (!this.hasKey && this.step===2) initPackagesSwiperAndBind();
@@ -1270,21 +1310,79 @@
         this.errors={}; let firstInvalidEl=null;
 
         if (stepIndex===0){
-          if (!this.form.name?.trim()){ this.errors.name='Vul je volledige naam in.'; firstInvalidEl=firstInvalidEl||document.getElementById('name'); }
+          if (!this.form.name?.trim()){
+            this.errors.name='Vul je volledige naam in.';
+            firstInvalidEl=firstInvalidEl||document.getElementById('name');
+          }
+
           const email=this.form.email?.trim()||'';
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ this.errors.email='Vul een geldig e-mailadres in.'; firstInvalidEl=firstInvalidEl||document.getElementById('email'); }
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+            this.errors.email='Vul een geldig e-mailadres in.';
+            firstInvalidEl=firstInvalidEl||document.getElementById('email');
+          }
+
           const phoneVal=(this.form.phone||'').trim();
-          if (!phoneVal){ this.errors.phone='Vul je telefoonnummer in.'; firstInvalidEl=firstInvalidEl||document.getElementById('phone'); }
+          if (!phoneVal){
+            this.errors.phone='Vul je telefoonnummer in.';
+            firstInvalidEl=firstInvalidEl||document.getElementById('phone');
+          }
+
           const dob=this.form.dob;
-          if (!dob){ this.errors.dob='Kies je geboortedatum.'; firstInvalidEl=firstInvalidEl||document.getElementById('dob'); }
-          if (!this.form.gender){ this.errors.gender='Kies je geslacht.'; }
-          if (!this.form.street?.trim()){ this.errors.street='Vul je straatnaam in.'; firstInvalidEl=firstInvalidEl||document.getElementById('street'); }
-          if (!this.form.house_number?.trim()){ this.errors.house_number='Vul je huisnummer in.'; firstInvalidEl=firstInvalidEl||document.getElementById('house_number'); }
+          if (!dob){
+            this.errors.dob='Kies je geboortedatum.';
+            firstInvalidEl=firstInvalidEl||document.getElementById('dob');
+          }
+
+          // ✅ NIEUW: startdatum verplicht, niet in verleden, en op maandag
+          const startDateStr = this.form.start_date;
+          if (!startDateStr) {
+            this.errors.start_date = 'Kies je startdatum.';
+            firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
+          } else {
+            const sd = new Date(startDateStr + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            if (sd < today) {
+              this.errors.start_date = 'Startdatum mag niet in het verleden liggen.';
+              firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
+            }
+
+            const day = sd.getDay(); // 0=zo, 1=ma, ...
+            if (day !== 1) {
+              this.errors.start_date = 'Startdatum moet op een maandag vallen.';
+              firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
+            }
+          }
+
+          if (!this.form.gender){
+            this.errors.gender='Kies je geslacht.';
+          }
+
+          if (!this.form.street?.trim()){
+            this.errors.street='Vul je straatnaam in.';
+            firstInvalidEl=firstInvalidEl||document.getElementById('street');
+          }
+
+          if (!this.form.house_number?.trim()){
+            this.errors.house_number='Vul je huisnummer in.';
+            firstInvalidEl=firstInvalidEl||document.getElementById('house_number');
+          }
+
           const pcRaw=(this.form.postcode||'').trim().toUpperCase();
           const pc=pcRaw.replace(/\s+/g,' ');
           const nlRe=/^\d{4}\s?[A-Z]{2}$/, beRe=/^\d{4}$/;
-          let okPostcode=nlRe.test(pc); if(!okPostcode && beRe.test(pc)){ const num=parseInt(pc,10); okPostcode = num>=1000 && num<=9999; }
-          if (!okPostcode){ this.errors.postcode='Vul een geldige postcode in (NL: 1234 AB, BE: 1000–9999).'; firstInvalidEl=firstInvalidEl||document.getElementById('postcode'); } else { this.form.postcode=pc; }
+          let okPostcode=nlRe.test(pc);
+          if(!okPostcode && beRe.test(pc)){
+            const num=parseInt(pc,10);
+            okPostcode = num>=1000 && num<=9999;
+          }
+          if (!okPostcode){
+            this.errors.postcode='Vul een geldige postcode in (NL: 1234 AB, BE: 1000–9999).';
+            firstInvalidEl=firstInvalidEl||document.getElementById('postcode');
+          } else {
+            this.form.postcode=pc;
+          }
         }
         if (stepIndex===1){
           if (!['roy','eline','nicky','none'].includes(this.form.preferred_coach)) this.errors.preferred_coach='Kies je coachvoorkeur (of selecteer “Geen voorkeur”).';
@@ -1405,7 +1503,7 @@
 
         const payload={
           name:this.form.name, email:this.form.email, phone:this.form.phone,
-          dob:this.form.dob, gender:this.form.gender,
+          dob:this.form.dob, start_date:this.form.start_date, gender:this.form.gender,
           street:this.form.street, house_number:this.form.house_number, postcode:this.form.postcode,
           preferred_coach:this.form.preferred_coach,
           package: this.hasKey ? ak.package : this.form.package,
