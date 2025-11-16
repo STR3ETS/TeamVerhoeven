@@ -2,6 +2,7 @@
 // app/Models/TrainingBlock.php
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TrainingBlock extends Model
@@ -16,5 +17,12 @@ class TrainingBlock extends Model
     public function items()
     {
         return $this->hasMany(TrainingItem::class)->orderBy('sort_order');
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function (TrainingBlock $block) {
+            $block->items()->delete();
+        });
     }
 }

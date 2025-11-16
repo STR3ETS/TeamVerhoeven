@@ -138,6 +138,21 @@
                                 </a>
                             @endif
                         </li>
+                        <li>
+                            @if($mustIntake)
+                                <span class="p-2 rounded bg-[#a89066]/50 text-black/60 cursor-not-allowed pointer-events-none flex items-center gap-2"
+                                    title="Rond eerst je intake af">
+                                    <i class="min-w-4 fa-solid fa-book-open fa-xs text-black/50"></i>
+                                    <span class="font-semibold text-xs pt-0.5">Trainingsbibliotheek</span>
+                                </span>
+                            @else
+                                <a href="{{ route('coach.training-library.index') }}"
+                                class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                    <i class="min-w-4 fa-solid fa-book-open fa-xs text-black"></i>
+                                    <span class="text-black font-semibold text-xs pt-0.5">Trainingsbibliotheek</span>
+                                </a>
+                            @endif
+                        </li>
                     @endif
                     <!-- INGELOGT ALS KLANT -->
                     @if(auth()->user()->role === 'client')
@@ -283,6 +298,21 @@
                                 <a href="{{ route('coach.clients.index') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
                                     <i class="min-w-4 fa-solid fa-dumbbell fa-xs text-black"></i>
                                     <span class="text-black font-semibold text-xs pt-0.5">Klanten</span>
+                                </a>
+                            @endif
+                        </li>
+                        <li>
+                            @if($mustIntake)
+                                <span class="p-2 rounded bg-[#a89066]/50 text-black/60 cursor-not-allowed pointer-events-none flex items-center gap-2"
+                                    title="Rond eerst je intake af">
+                                    <i class="min-w-4 fa-solid fa-book-open fa-xs text-black/50"></i>
+                                    <span class="font-semibold text-xs pt-0.5">Trainingsbibliotheek</span>
+                                </span>
+                            @else
+                                <a href="{{ route('coach.training-library.index') }}"
+                                class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                    <i class="min-w-4 fa-solid fa-book-open fa-xs text-black"></i>
+                                    <span class="text-black font-semibold text-xs pt-0.5">Trainingsbibliotheek</span>
                                 </a>
                             @endif
                         </li>

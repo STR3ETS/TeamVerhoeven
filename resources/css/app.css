@@ -9,3 +9,26 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@layer components {
+    /* Geel – bv. voor Raise */
+    .badge-amber {
+        @apply text-amber-700 bg-amber-100 border border-amber-300;
+    }
+
+    /* Blauw – bv. voor Activatie / Mobilisatie */
+    .badge-sky {
+        @apply text-sky-700 bg-sky-100 border border-sky-300;
+    }
+
+    /* Groen – bv. voor Zone 1 / Recovery */
+    .badge-emerald {
+        @apply text-emerald-700 bg-emerald-100 border border-emerald-300;
+    }
+
+    /* Roze – bv. voor intensieve / opvallende onderdelen */
+    .badge-rose {
+        @apply text-rose-700 bg-rose-100 border border-rose-300;
+    }
+}
+

@@ -62,6 +62,26 @@ Route::middleware(['auth', 'intake.complete'])->group(function () {
             Route::patch('/reorder',         [CoachClientTodoController::class, 'reorder'])->name('reorder'); // sorteren
             Route::patch('/{todo}',          [CoachClientTodoController::class, 'update'])->name('update');
         });
+
+        Route::prefix('training-library')->name('training-library.')->group(function () {
+            Route::get('/',                      [TrainingLibraryController::class, 'index'])->name('index');
+
+            Route::post('/sections',             [TrainingLibraryController::class, 'storeSection'])->name('sections.store');
+            Route::patch('/sections/{section}',  [TrainingLibraryController::class, 'updateSection'])->name('sections.update');
+            Route::delete('/sections/{section}', [TrainingLibraryController::class, 'destroySection'])->name('sections.destroy');
+
+            Route::post('/cards',                [TrainingLibraryController::class, 'storeCard'])->name('cards.store');
+            Route::patch('/cards/{card}',        [TrainingLibraryController::class, 'updateCard'])->name('cards.update');
+            Route::delete('/cards/{card}',       [TrainingLibraryController::class, 'destroyCard'])->name('cards.destroy');
+
+            Route::post('/blocks',               [TrainingLibraryController::class, 'storeBlock'])->name('blocks.store');
+            Route::patch('/blocks/{block}',      [TrainingLibraryController::class, 'updateBlock'])->name('blocks.update');
+            Route::delete('/blocks/{block}',     [TrainingLibraryController::class, 'destroyBlock'])->name('blocks.destroy');
+
+            Route::post('/items',                [TrainingLibraryController::class, 'storeItem'])->name('items.store');
+            Route::patch('/items/{item}',        [TrainingLibraryController::class, 'updateItem'])->name('items.update');
+            Route::delete('/items/{item}',       [TrainingLibraryController::class, 'destroyItem'])->name('items.destroy');
+        });
     });
 
     Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
