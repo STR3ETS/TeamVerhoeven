@@ -70,25 +70,17 @@
     {{-- LINKERKOLOM: secties + trainingen --}}
     <div>
         <div class="bg-white rounded-3xl border border-gray-300 p-5">
-            <h2 class="text-sm font-semibold uppercase tracking-wide opacity-70 mb-3">
-                Secties &amp; trainingen
-            </h2>
-
-            <p class="text-[11px] text-black/60 mb-4">
-                Kies een sectie en maak daaronder trainingen aan. Secties zelf zijn vast
-                (bijv. Warming-up, Interval, Cooling Down).
-            </p>
 
             <div class="space-y-4">
                 @foreach($sections as $section)
                     <div class="border border-gray-200 rounded-2xl p-3 bg-gray-50/60">
                         {{-- Titel sectie (alleen lezen) --}}
                         <div class="flex items-center justify-between gap-2 mb-2">
-                            <span class="text-xs font-semibold text-black">
+                            <span class="text-lg font-semibold text-black">
                                 {{ $section->name }}
                             </span>
-                            <span class="text-[10px] text-gray-400">
-                                #{{ $section->sort_order }}
+                            <span class="text-xs text-gray-400">
+                                {{ $section->sort_order }}
                             </span>
                         </div>
 
@@ -97,11 +89,11 @@
                             @foreach($section->cards as $card)
                                 <li class="flex items-center justify-between gap-2 text-xs">
                                     <a href="{{ route('coach.training-library.index', ['card' => $card->id]) }}"
-                                       class="flex-1 truncate {{ optional($currentCard)->id === $card->id ? 'font-semibold text-black' : 'text-black/70 hover:text-black' }}">
+                                       class="flex-1 truncate {{ optional($currentCard)->id === $card->id ? 'text-[#c8ab7a]' : 'text-black/70 hover:text-[#c8ab7a]' }}">
                                         {{ $card->title }}
                                     </a>
-                                    <span class="text-[10px] text-gray-400">
-                                        #{{ $card->sort_order }}
+                                    <span class="text-xs mr-2 text-gray-400">
+                                        {{ $card->sort_order }}
                                     </span>
 
                                     {{-- Verwijder training --}}
@@ -111,8 +103,8 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
-                                                class="text-[11px] text-red-500 hover:underline">
-                                            X
+                                                class="text-[11px] text-red-500/80 hover:text-red-500 transition">
+                                            <i class="fa-solid fa-trash-can fa-sm"></i>
                                         </button>
                                     </form>
                                 </li>
@@ -121,21 +113,22 @@
 
                         {{-- Nieuwe training in deze sectie --}}
                         <form action="{{ route('coach.training-library.cards.store') }}" method="POST"
-                              class="mt-3 flex flex-col gap-2 md:flex-row md:items-center">
+                              class="mt-4 flex flex-col gap-2">
                             @csrf
                             <input type="hidden" name="training_section_id" value="{{ $section->id }}">
 
                             <input type="text" name="title" required
-                                   class="flex-1 text-xs px-2.5 py-1.5 rounded-2xl border border-gray-300 bg-white"
+                                   class="flex-1 text-xs px-2.5 py-1.5 rounded-2xl border border-gray-300 bg-white outline-none focus:border-[#c8ab7a] transition"
                                    placeholder="Nieuwe training in {{ $section->name }}">
-                            <input type="number" name="sort_order"
-                                   class="w-16 text-xs px-2 py-1.5 rounded-2xl border border-gray-300 bg-white"
-                                   placeholder="#">
-
-                            <button type="submit"
-                                    class="text-[11px] px-3 py-1.5 rounded-2xl bg-black text-white font-semibold">
-                                + Training
-                            </button>
+                            <div class="flex gap-2">
+                                <input type="number" name="sort_order" min=1 max=999
+                                    class="w-24 text-xs px-2 py-1.5 rounded-2xl border border-gray-300 bg-white outline-none focus:border-[#c8ab7a] transition"
+                                    placeholder="Sorteren">
+                                <button type="submit"
+                                        class="text-[11px] flex-1 px-3 py-1.5 rounded-2xl bg-black hover:bg-[#c8ab7a] transition cursor-pointer text-white font-semibold">
+                                    Training aanmaken
+                                </button>
+                            </div>
                         </form>
                     </div>
                 @endforeach
@@ -150,7 +143,7 @@
                 {{-- 1. Titel + sort_order van de training --}}
                 <form action="{{ route('coach.training-library.cards.update', $currentCard) }}"
                     method="POST"
-                    class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    class="flex flex-col gap-2">
                     @csrf
                     @method('PATCH')
 
@@ -158,7 +151,7 @@
                     <input type="hidden" name="training_section_id" value="{{ $currentCard->training_section_id }}">
 
                     <div class="flex-1">
-                        <label class="block text-[11px] font-semibold text-black/60 mb-1">
+                        <label class="block text-[11px] font-semibold text-black/80 mb-1">
                             Titel van training
                         </label>
                         <input type="text" name="title"
@@ -166,22 +159,22 @@
                                class="w-full px-3 py-2 rounded-2xl border border-gray-300 text-sm"
                                placeholder="Bijv. Warming-up Hardlopen / Cardio">
                     </div>
-
-                    <div class="w-24">
-                        <label class="block text-[11px] font-semibold text-black/60 mb-1">
-                            Sortering
-                        </label>
-                        <input type="number" name="sort_order"
-                               value="{{ old('sort_order', $currentCard->sort_order) }}"
-                               class="w-full px-2 py-2 rounded-2xl border border-gray-300 text-sm text-center"
-                               placeholder="#">
-                    </div>
-
-                    <div class="mt-2 md:mt-6 flex items-center gap-2">
-                        <button type="submit"
-                                class="px-4 py-2 rounded-2xl bg-black text-white text-xs font-semibold">
-                            Training opslaan
-                        </button>
+                    <div class="flex gap-2 items-end">
+                        <div class="w-24">
+                            <label class="block text-[11px] font-semibold text-black/80 mb-1">
+                                Sortering
+                            </label>
+                            <input type="number" name="sort_order" min=1 max=999
+                                value="{{ old('sort_order', $currentCard->sort_order) }}"
+                                class="w-full px-2 py-2 rounded-2xl border border-gray-300 text-sm text-center"
+                                placeholder="#">
+                        </div>
+                        <div class="flex-1 items-center gap-2">
+                            <button type="submit"
+                                    class="px-4 py-2.75 w-full rounded-full bg-black hover:bg-[#c8ab7a] transition cursor-pointer text-white text-xs font-semibold">
+                                Training opslaan
+                            </button>
+                        </div>
                     </div>
                 </form>
 
@@ -193,7 +186,7 @@
                         @csrf
                         @method('DELETE')
                         <button type="submit"
-                                class="px-3 py-2 rounded-2xl border border-red-300 text-[11px] text-red-600 font-semibold">
+                                class="px-3 py-2 rounded-2xl border border-red-300 hover:bg-red-500 hover:border-red-500 cursor-pointer transition text-[11px] text-red-600 hover:text-white font-semibold">
                             Verwijder training
                         </button>
                     </form>
@@ -208,79 +201,80 @@
                             {{-- Block header (Raise / Activation etc) --}}
                             <form action="{{ route('coach.training-library.blocks.update', $block) }}"
                                 method="POST"
-                                class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                                class="flex flex-col gap-2">
                                 @csrf
                                 @method('PATCH')
 
-                                <div class="flex-1">
-                                    <label class="block text-[11px] font-semibold text-black/60 mb-1">
-                                        Onderdeel titel
-                                    </label>
-                                    <input type="text" name="label"
-                                           value="{{ old('label', $block->label) }}"
-                                           class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-xs"
-                                           placeholder="Bijv. Raise, Activation / Mobilisation">
+                                <div class="flex gap-2">
+                                    <div class="w-1/2">
+                                        <label class="block text-[11px] font-semibold text-black/80 mb-1">
+                                            Onderdeel titel
+                                        </label>
+                                        <input type="text" name="label"
+                                            value="{{ old('label', $block->label) }}"
+                                            class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-xs"
+                                            placeholder="Bijv. Raise, Activation / Mobilisation">
+                                    </div>
+                                    <div class=w-1/2">
+                                        <label class="block text-[11px] font-semibold text-black/80 mb-1">
+                                            Badge kleur
+                                        </label>
+                                        <select name="badge_classes"
+                                                class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-[11px] bg-white">
+                                            @foreach($badgeOptions as $value => $label)
+                                                <option value="{{ $value }}"
+                                                    @selected(old('badge_classes', $block->badge_classes) === $value)>
+                                                    {{ $label }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
 
-                                <div class="flex-1 md:max-w-[240px]">
-                                    <label class="block text-[11px] font-semibold text-black/60 mb-1">
-                                        Badge kleur
-                                    </label>
-                                    <select name="badge_classes"
-                                            class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-[11px] bg-white">
-                                        @foreach($badgeOptions as $value => $label)
-                                            <option value="{{ $value }}"
-                                                @selected(old('badge_classes', $block->badge_classes) === $value)>
-                                                {{ $label }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <p class="mt-1 text-[10px] text-black/45">
-                                        Dit bepaalt alleen de kleur van het label (Raise / Zone 1–5 / Cooling down / enz.).
-                                    </p>
-                                </div>
-
-                                <div class="w-20">
-                                    <label class="block text-[11px] font-semibold text-black/60 mb-1">
-                                        Volgorde
-                                    </label>
-                                    <input type="number" name="sort_order"
-                                           value="{{ old('sort_order', $block->sort_order) }}"
-                                           class="w-full px-2 py-1.5 rounded-2xl border border-gray-300 text-xs text-center">
-                                </div>
-
-                                <div class="flex items-center gap-2">
-                                    <button type="submit"
-                                            class="px-3 py-1.5 rounded-2xl bg-black text-white text-[11px] font-semibold mt-1 md:mt-0">
-                                        Opslaan
-                                    </button>
+                                <div class="flex gap-2 items-end">
+                                    <div class="w-20">
+                                        <label class="block text-[11px] font-semibold text-black/80 mb-1">
+                                            Volgorde
+                                        </label>
+                                        <input type="number" name="sort_order"
+                                            value="{{ old('sort_order', $block->sort_order) }}"
+                                            class="w-full px-2 py-1.5 rounded-2xl border border-gray-300 text-xs text-center">
+                                    </div>
+                                    <div class="flex-1 items-center gap-2">
+                                        <button type="submit"
+                                                class="w-full px-3 py-1.75 rounded-2xl bg-black hover:bg-[#c8ab7a] transition cursor-pointer text-white text-[11px] font-semibold mt-1 md:mt-0">
+                                            Opslaan
+                                        </button>
+                                    </div>
                                 </div>
                             </form>
 
-                            <div class="flex justify-end mt-1">
+                            <div class="flex justify-end mt-3.5">
                                 <form action="{{ route('coach.training-library.blocks.destroy', $block) }}"
                                       method="POST"
                                       onsubmit="return confirm('Dit onderdeel + alle oefeningen verwijderen?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
-                                            class="px-2.5 py-1.5 rounded-2xl border border-red-300 text-[11px] text-red-600 font-semibold">
+                                            class="px-3 py-1.75 rounded-2xl border border-red-300 hover:bg-red-500 hover:border-red-500 cursor-pointer transition text-[11px] text-red-600 hover:text-white font-semibold">
                                         Onderdeel verwijderen
                                     </button>
                                 </form>
                             </div>
+
+                            <hr class="border-gray-200 my-4">
 
                             {{-- Items (oefeningen) binnen dit onderdeel --}}
                             <div class="mt-3 space-y-2">
                                 @foreach($block->items as $item)
                                     <form action="{{ route('coach.training-library.items.update', $item) }}"
                                         method="POST"
-                                        class="grid grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_auto] gap-2 items-start">
+                                        class="grid grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_auto] gap-2 items-end">
                                         @csrf
                                         @method('PATCH')
 
                                         <div>
-                                            <label class="block text-[10px] font-semibold text-black/55 mb-1">
+                                            <label class="block text-[11px] font-semibold text-black/80 mb-1">
                                                 Oefening (linkerzijde)
                                             </label>
                                             <input type="text" name="left_html"
@@ -290,7 +284,7 @@
                                         </div>
 
                                         <div>
-                                            <label class="block text-[10px] font-semibold text-black/55 mb-1">
+                                            <label class="block text-[11px] font-semibold text-black/80 mb-1">
                                                 Duur / herhalingen (rechts)
                                             </label>
                                             <input type="text" name="right_text"
@@ -299,20 +293,15 @@
                                                    placeholder="Bijv. 1 kilometer, 3 × 30 sec">
                                         </div>
 
-                                        <div class="flex items-center gap-1 pt-5">
-                                            <button type="submit"
-                                                    class="px-3 py-1.5 rounded-2xl bg-black text-white text-[11px] font-semibold">
-                                                ✔
-                                            </button>
-
+                                        <div class="flex items-center gap-1 pb-2">
                                             <form action="{{ route('coach.training-library.items.destroy', $item) }}"
                                                   method="POST"
                                                   onsubmit="return confirm('Oefening verwijderen?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
-                                                        class="px-2.5 py-1.5 rounded-2xl border border-red-300 text-[11px] text-red-600 font-semibold">
-                                                    X
+                                                        class="text-[11px] text-red-500/80 hover:text-red-500 transition">
+                                                    <i class="fa-solid fa-trash-can fa-lg"></i>
                                                 </button>
                                             </form>
                                         </div>
@@ -346,10 +335,10 @@
                                                placeholder="Bijv. 10 meter, 6× herhalen">
                                     </div>
 
-                                    <div class="flex items-center pt-6">
+                                    <div class="flex items-center pt-4.5">
                                         <button type="submit"
-                                                class="px-3 py-1.5 rounded-2xl border border-gray-400 text-[11px] font-semibold">
-                                            + Regel
+                                                class="w-full px-3 py-1.75 rounded-2xl bg-black hover:bg-[#c8ab7a] transition cursor-pointer text-white text-[11px] font-semibold">
+                                            Toevoegen
                                         </button>
                                     </div>
                                 </form>
