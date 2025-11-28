@@ -21,6 +21,18 @@
         </div>
     @endcan
 @endif
+@if($role === 'coach')
+    @can('create', App\Models\Thread::class)
+        <h2 class="text-lg font-bold mb-2">Snelkoppelingen</h2>
+        <div class="grid gap-3 grid-cols-1 md:grid-cols-4 mb-6">
+            <a href="{{ route('coach.threads.create') }}"
+               class="p-4 bg-[#c8ab7a] hover:bg-[#a89067] transition duration-300 rounded">
+                <div class="font-semibold text-white">Nieuwe chat met klant</div>
+                <p class="text-sm text-white">Start een nieuw gesprek</p>
+            </a>
+        </div>
+    @endcan
+@endif
 
 <div class="mt-7">
   <h2 class="text-lg font-bold">Gesprekken</h2>

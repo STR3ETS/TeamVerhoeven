@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Validation\ValidationException;
+use App\Mail\NewThreadNotification;
+use Illuminate\Support\Facades\Mail;
 
 class ClientThreadController extends Controller
 {
@@ -46,8 +48,9 @@ class ClientThreadController extends Controller
     {
         $this->authorize('create', Thread::class);
 
-        $user = auth()->user();
-        abort_if(!$user, 404);
+        $userId = auth()->id();
+        $user   = auth()->user();
+        abort_if(!$userId || !$user, 404);
 
         $data = $request->validate([
             'subject' => ['nullable', 'string', 'max:150'],
@@ -71,12 +74,23 @@ class ClientThreadController extends Controller
             ]);
         }
 
+        // 4) Thread aanmaken
         $thread = Thread::create([
-            'client_user_id' => $user->id,
+            'client_user_id' => $userId,
             'coach_user_id'  => $coachUserId,
             'subject'        => $data['subject'] ?? null,
         ]);
 
+        // 5) Relaties laden voor de mail
+        $thread->load(['clientUser', 'coachUser']);
+
+        // 6) Mail sturen naar de coach van deze thread
+        if ($thread->coachUser && $thread->coachUser->email) {
+            Mail::to($thread->coachUser->email)
+                ->send(new NewThreadNotification($thread));
+        }
+
+        // 7) Door naar de detailpagina van het gesprek
         return redirect()->route('client.threads.show', $thread);
     }
 

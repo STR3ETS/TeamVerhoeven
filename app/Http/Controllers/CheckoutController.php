@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 use MailchimpMarketing\ApiClient as Mailchimp;
 use MailchimpMarketing\ApiException as MailchimpApiException;
 use Stripe\StripeClient;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NewIntakeNotification;
 
 class CheckoutController extends Controller
 {
@@ -309,6 +311,9 @@ class CheckoutController extends Controller
                 $dur = (int)($intake->payload['duration_weeks'] ?? 12);
                 $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
 
+                // 🔔 NIEUW: mail sturen als het echt een nieuwe user is
+                $this->notifyNewUserIfNeeded($user, $intake, $order); // <-- deze regel toevoegen
+
                 // [AK] gebruiks­count ophogen
                 if ($forceFake) {
                     \App\Models\AccessKey::where('id', $ak['id'])->increment('uses_count');
@@ -583,6 +588,7 @@ class CheckoutController extends Controller
                 $pkg = (string)($intake->payload['package'] ?? 'pakket_a');
                 $dur = (int)($intake->payload['duration_weeks'] ?? 12);
                 $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
+                $this->notifyNewUserIfNeeded($user, $intake, $order);
 
                 return [$user, $intake, $order];
             });
@@ -1089,6 +1095,42 @@ class CheckoutController extends Controller
                     'notes'              => $d['notes'],
                 ]
             );
+        }
+    }
+
+    /**
+     * Stuur mail bij nieuwe user (alleen als hij net is aangemaakt).
+     * Later kun je hier coach-specifieke logica bijzetten.
+     */
+    private function notifyNewUserIfNeeded(User $user, Intake $intake, ?Order $order = null): void
+    {
+        if (! $user->wasRecentlyCreated) {
+            return;
+        }
+
+        try {
+            // Nu altijd naar Boyd
+            Mail::to('boyd@eazyonline.nl')
+                ->send(new NewIntakeNotification($user, $intake, $order));
+
+            // 🔜 Later:
+            // $preferred = $intake->payload['contact']['preferred_coach'] ?? 'none';
+            // switch ($preferred) {
+            //     case 'nicky': Mail::to('nicky@...')->send(...); break;
+            //     case 'eline': Mail::to('eline@...')->send(...); break;
+            //     case 'roy':   Mail::to('roy@...')->send(...);   break;
+            //     case 'none':
+            //     default:
+            //         Mail::to([...])->send(...); // alle drie
+            //         break;
+            // }
+
+        } catch (\Throwable $e) {
+            \Log::error('[notifyNewUserIfNeeded] mail failed', [
+                'user_id' => $user->id,
+                'email'   => $user->email,
+                'error'   => $e->getMessage(),
+            ]);
         }
     }
 }

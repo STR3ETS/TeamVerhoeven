@@ -42,6 +42,9 @@ Route::middleware(['auth', 'intake.complete'])->group(function () {
     Route::prefix('coach')->name('coach.')->middleware('role:coach')->group(function () {
         Route::get('/', fn () => view('coach.index'))->name('index');
         Route::get('/threads',                             [CoachThreadController::class, 'index'])->name('threads.index');
+        Route::get('/threads/create',                      [CoachThreadController::class, 'create'])->name('threads.create');
+        Route::delete('/threads/{thread}',                 [CoachThreadController::class, 'destroy'])->name('threads.destroy');
+        Route::post('/threads',                            [CoachThreadController::class, 'store'])->name('threads.store');
         Route::get('/threads/{thread}',                    [CoachThreadController::class, 'show'])->name('threads.show');
         Route::post('/threads/{thread}/msg',               [CoachThreadController::class, 'storeMessage'])->name('threads.messages.store');
         Route::get('/clients',                             [CoachClientController::class, 'index'])->name('clients.index');

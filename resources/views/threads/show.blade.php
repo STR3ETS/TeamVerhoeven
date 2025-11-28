@@ -49,10 +49,30 @@
             <a href="{{ route('coach.threads.index') }}" class="text-xs opacity-25 hover:opacity-50 transition duration-300">Terug naar overzicht</a>
         @endif
 
-        <h1 class="text-2xl font-bold mb-8 mt-4">
-            <i class="fa-solid fa-file-signature mr-4"></i>
-            {{ $thread->subject ?? 'Zonder onderwerp' }}
-        </h1>
+        <div class="mt-4 mb-6 flex items-start justify-between gap-4">
+            <h1 class="text-2xl font-bold">
+                <i class="fa-solid fa-file-signature mr-4"></i>
+                {{ $thread->subject ?? 'Zonder onderwerp' }}
+            </h1>
+
+            @if($role === 'coach' && auth()->id() === $thread->coach_user_id)
+                <form
+                    method="POST"
+                    action="{{ route('coach.threads.destroy', $thread) }}"
+                    onsubmit="return confirm('Weet je zeker dat je dit gesprek wilt sluiten? Dit kan niet ongedaan worden gemaakt.');"
+                    class="shrink-0"
+                >
+                    @csrf
+                    @method('DELETE')
+                    <button
+                        type="submit"
+                        class="px-4 py-2 rounded-full border border-red-300 text-xs font-semibold text-red-600 hover:bg-red-50 transition duration-300"
+                    >
+                        Gesprek sluiten
+                    </button>
+                </form>
+            @endif
+        </div>
 
         <div class="w-full p-5 bg-white rounded-3xl border border-gray-300 min-h-[400px]">
             @if($thread->messages->isEmpty())
