@@ -17,6 +17,7 @@ use MailchimpMarketing\ApiException as MailchimpApiException;
 use Stripe\StripeClient;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NewIntakeNotification;
+use App\Mail\ClientWelcomeMail;
 
 class CheckoutController extends Controller
 {
@@ -1099,8 +1100,9 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Stuur mail bij nieuwe user (alleen als hij net is aangemaakt).
-     * Later kun je hier coach-specifieke logica bijzetten.
+     * Stuur mails bij nieuwe user (alleen als hij net is aangemaakt).
+     * - Interne notificatie (naar Boyd)
+     * - Welkomstmail naar de klant (pakket-afhankelijk)
      */
     private function notifyNewUserIfNeeded(User $user, Intake $intake, ?Order $order = null): void
     {
@@ -1109,21 +1111,24 @@ class CheckoutController extends Controller
         }
 
         try {
-            // Nu altijd naar Boyd
-            Mail::to('boyd@eazyonline.nl')
-                ->send(new NewIntakeNotification($user, $intake, $order));
+            // 1) Interne notificatie (zoals je al had)
+            // Mail::to('boyd@eazyonline.nl')
+            //     ->send(new NewIntakeNotification($user, $intake, $order));
 
-            // 🔜 Later:
-            // $preferred = $intake->payload['contact']['preferred_coach'] ?? 'none';
-            // switch ($preferred) {
-            //     case 'nicky': Mail::to('nicky@...')->send(...); break;
-            //     case 'eline': Mail::to('eline@...')->send(...); break;
-            //     case 'roy':   Mail::to('roy@...')->send(...);   break;
-            //     case 'none':
-            //     default:
-            //         Mail::to([...])->send(...); // alle drie
-            //         break;
-            // }
+            // 2) Welkomstmail naar de klant zelf
+            if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                Mail::to($user->email)
+                    ->send(new ClientWelcomeMail($user, $intake, $order));
+            }
+
+            // 🔜 Later kun je hier nog coach-specifieke mails doen op basis van preferred_coach:
+            $preferred = $intake->payload['contact']['preferred_coach'] ?? 'none';
+            switch ($preferred) {
+                case 'nicky': Mail::to('nicky2befitlifestyle@hotmail.com')->send(...); break;
+                case 'eline': Mail::to('eline2befitlifestyle@hotmail.com')->send(...); break;
+                case 'roy':   Mail::to('roy@2befitlifestyle.nl')->send(...);   break;
+                default: /* eventueel algemeen coach-adres */ break;
+            }
 
         } catch (\Throwable $e) {
             \Log::error('[notifyNewUserIfNeeded] mail failed', [
