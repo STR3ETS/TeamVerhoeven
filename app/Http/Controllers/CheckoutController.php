@@ -1121,13 +1121,29 @@ class CheckoutController extends Controller
                     ->send(new ClientWelcomeMail($user, $intake, $order));
             }
 
-            // 🔜 Later kun je hier nog coach-specifieke mails doen op basis van preferred_coach:
+            // Coach-specifieke mails op basis van preferred_coach
             $preferred = $intake->payload['contact']['preferred_coach'] ?? 'none';
-            switch ($preferred) {
-                case 'nicky': Mail::to('nicky2befitlifestyle@hotmail.com')->send(...); break;
-                case 'eline': Mail::to('eline2befitlifestyle@hotmail.com')->send(...); break;
-                case 'roy':   Mail::to('roy@2befitlifestyle.nl')->send(...);   break;
-                default: /* eventueel algemeen coach-adres */ break;
+
+            /**
+             * Logica:
+             * - 'nicky'  => alleen Nicky
+             * - 'eline'  => alleen Eline
+             * - 'roy'    => alleen Roy
+             * - 'none'   => alle 3 (Nicky, Eline én Roy)
+             */
+            $coachEmails = match ($preferred) {
+                'nicky' => ['nicky2befitlifestyle@hotmail.com'],
+                'eline' => ['eline2befitlifestyle@hotmail.com'],
+                'roy'   => ['roy@2befitlifestyle.nl'],
+                default => [
+                    'nicky2befitlifestyle@hotmail.com',
+                    'eline2befitlifestyle@hotmail.com',
+                    'roy@2befitlifestyle.nl',
+                ],
+            };
+
+            foreach ($coachEmails as $coachEmail) {
+                Mail::to($coachEmail)->send(new NewIntakeNotification($user, $intake, $order));
             }
 
         } catch (\Throwable $e) {
