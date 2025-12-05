@@ -16,6 +16,7 @@
         </a>
     </div>
 
+    {{-- WELKOM / INTRO --}}
     <div style="padding:12px 24px;line-height:1.7;">
         <h3 style="margin-top:0;margin-bottom:10px;">
             Welkom {{ $firstName ?: $user->name }} bij 2BEFIT X TEAM VERHOEVEN
@@ -43,36 +44,7 @@
         </p>
     </div>
 
-    <div style="text-align:center;width:100%;padding:30px 0 40px 0;">
-        <a href="{{ $portalUrl }}"
-           style="display:inline-block;padding:15px 30px;color:black;text-decoration:none;border-radius:30px;border:#c4a785 2px solid;background-color:#c4a785;margin:0 auto;font-weight:bold;">
-            Klik hier voor jouw online omgeving
-        </a>
-    </div>
-
-    <div style="text-align:center;border-top:1px solid #b89c82;border-bottom:1px solid #b89c82;">
-        <p style="padding:20px;margin:0;">
-            <strong>Tip!</strong> Zet de online omgeving op jouw <strong>beginscherm</strong> van je telefoon voor snelle toegang.
-        </p>
-    </div>
-
-    {{-- INSTAGRAM ICON --}}
-    <div style="text-align:center;padding-top:30px;">
-        <a href="https://www.instagram.com/2befitlifestyle" style="text-decoration:none;">
-            <img src="https://cdn-images.mailchimp.com/icons/social-block-v3/block-icons-v3/instagram-filled-dark-40.png"
-                 alt="Instagram"
-                 style="width:50px;height:50px;border-radius:10px;border:none;">
-        </a>
-    </div>
-
-    {{-- 2BEFIT LOGO --}}
-    <div style="text-align:center;padding:30px 0 15px 0;">
-        <img src="https://mcusercontent.com/ae88aba1db76c8950098bd323/images/cc0506cf-ff7f-569b-c804-98b163d7c9e5.png"
-             alt="2Befit Logo"
-             style="width:100px;height:100px;border-radius:10px;border:none;">
-    </div>
-
-    {{-- SUPPLEMENTS / KORTING BLOK OP BASIS VAN PAKKET --}}
+    {{-- SUPPLEMENTS / KORTING BLOK OP BASIS VAN PAKKET (NU DIRECT NA DE INTRO) --}}
     <div style="padding:0 25px 30px 25px;line-height:1.7;font-size:14px;">
 
         @if($package === 'pakket_b' && $duration === 24)
@@ -283,6 +255,37 @@
 
     </div>
 
+    {{-- CTA NAAR ONLINE OMGEVING --}}
+    <div style="text-align:center;width:100%;padding:30px 0 40px 0;">
+        <a href="{{ $portalUrl }}"
+           style="display:inline-block;padding:15px 30px;color:black;text-decoration:none;border-radius:30px;border:#c4a785 2px solid;background-color:#c4a785;margin:0 auto;font-weight:bold;">
+            Klik hier voor jouw online omgeving
+        </a>
+    </div>
+
+    {{-- TIP BALK --}}
+    <div style="text-align:center;border-top:1px solid #b89c82;border-bottom:1px solid #b89c82;">
+        <p style="padding:20px;margin:0;">
+            <strong>Tip!</strong> Zet de online omgeving op jouw <strong>beginscherm</strong> van je telefoon voor snelle toegang.
+        </p>
+    </div>
+
+    {{-- INSTAGRAM ICON --}}
+    <div style="text-align:center;padding-top:30px;">
+        <a href="https://www.instagram.com/2befitlifestyle" style="text-decoration:none;">
+            <img src="https://cdn-images.mailchimp.com/icons/social-block-v3/block-icons-v3/instagram-filled-dark-40.png"
+                 alt="Instagram"
+                 style="width:50px;height:50px;border-radius:10px;border:none;">
+        </a>
+    </div>
+
+    {{-- 2BEFIT LOGO --}}
+    <div style="text-align:center;padding:30px 0 15px 0;">
+        <img src="https://mcusercontent.com/ae88aba1db76c8950098bd323/images/cc0506cf-ff7f-569b-c804-98b163d7c9e5.png"
+             alt="2Befit Logo"
+             style="width:100px;height:100px;border-radius:10px;border:none;">
+    </div>
+
     {{-- FOOTER --}}
     <div style="text-align:center;line-height:2.0;padding:0 25px 20px 25px;font-size:13px;">
         <p style="margin:0 0 10px 0;">
@@ -303,7 +306,7 @@
         <p style="margin:0;">
             Ons mailingadres is:<br>
             <a href="mailto:coaching@2befitlifestyle.nl" style="color:#000;text-decoration:none;">
-                coaching@2befitlifestyle.nl
+                info@2befitlifestyle.nl
             </a>
         </p>
     </div>
