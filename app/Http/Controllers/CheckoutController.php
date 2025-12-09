@@ -379,6 +379,12 @@ class CheckoutController extends Controller
             'cancel_url'  => $cancelUrl,
             'customer_email' => $data['email'],
             'locale'      => 'nl',
+            'payment_method_types' => [
+                'card',
+                'ideal',
+                // eventueel:
+                // 'sepa_debit',
+            ],
             'phone_number_collection' => ['enabled' => true],
             'line_items' => [[
                 'price_data' => [
