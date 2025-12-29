@@ -1,5 +1,7 @@
 <?php
+
 // app/Http/Controllers/TrainingLibraryController.php
+
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -53,6 +55,36 @@ class TrainingLibraryController extends Controller
         ]);
     }
 
+    /* ---------- SOFT RESPONSE HELPER ---------- */
+
+    private function respond(Request $request, string $status, string $redirectUrl)
+    {
+        // fetch() stuurt Accept: application/json => geef JSON terug
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok'       => true,
+                'status'   => $status,
+                'redirect' => $redirectUrl,
+            ]);
+        }
+
+        return redirect()->to($redirectUrl)->with('status', $status);
+    }
+
+    private function firstCardUrl(): string
+    {
+        $firstCardId = TrainingCard::query()
+            ->join('training_sections', 'training_sections.id', '=', 'training_cards.training_section_id')
+            ->orderBy('training_sections.sort_order')
+            ->orderBy('training_cards.sort_order')
+            ->orderBy('training_cards.id')
+            ->value('training_cards.id');
+
+        return $firstCardId
+            ? route('coach.training-library.index', ['card' => $firstCardId])
+            : route('coach.training-library.index');
+    }
+
     /* ---------- SECTIONS ---------- */
 
     public function storeSection(Request $request)
@@ -68,7 +100,10 @@ class TrainingLibraryController extends Controller
 
         TrainingSection::create($data);
 
-        return back()->with('status', 'Sectie aangemaakt.');
+        // blijf op dezelfde pagina (inclusief ?card=...) als je via normale submit terugkomt
+        $url = url()->previous() ?: route('coach.training-library.index');
+
+        return $this->respond($request, 'Sectie aangemaakt.', $url);
     }
 
     public function updateSection(TrainingSection $section, Request $request)
@@ -80,14 +115,19 @@ class TrainingLibraryController extends Controller
 
         $section->update($data);
 
-        return back()->with('status', 'Sectie bijgewerkt.');
+        $url = url()->previous() ?: route('coach.training-library.index');
+
+        return $this->respond($request, 'Sectie bijgewerkt.', $url);
     }
 
-    public function destroySection(TrainingSection $section)
+    public function destroySection(TrainingSection $section, Request $request)
     {
         $section->delete();
 
-        return back()->with('status', 'Sectie (en alle trainingen daarin) verwijderd.');
+        // na verwijderen: ga naar eerste bestaande card (of index)
+        $url = $this->firstCardUrl();
+
+        return $this->respond($request, 'Sectie (en alle trainingen daarin) verwijderd.', $url);
     }
 
     /* ---------- CARDS (TRAININGEN) ---------- */
@@ -106,9 +146,9 @@ class TrainingLibraryController extends Controller
 
         $card = TrainingCard::create($data);
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $card->id])
-            ->with('status', 'Training aangemaakt.');
+        $url = route('coach.training-library.index', ['card' => $card->id]);
+
+        return $this->respond($request, 'Training aangemaakt.', $url);
     }
 
     public function updateCard(TrainingCard $card, Request $request)
@@ -121,16 +161,30 @@ class TrainingLibraryController extends Controller
 
         $card->update($data);
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $card->id])
-            ->with('status', 'Training bijgewerkt.');
+        $url = route('coach.training-library.index', ['card' => $card->id]);
+
+        return $this->respond($request, 'Training bijgewerkt.', $url);
     }
 
-    public function destroyCard(TrainingCard $card)
+    public function destroyCard(TrainingCard $card, Request $request)
     {
+        $deletedId = $card->id;
         $card->delete();
 
-        return back()->with('status', 'Training verwijderd.');
+        // kies volgende "eerste" kaart (maar niet de verwijderde)
+        $nextCardId = TrainingCard::query()
+            ->join('training_sections', 'training_sections.id', '=', 'training_cards.training_section_id')
+            ->where('training_cards.id', '!=', $deletedId)
+            ->orderBy('training_sections.sort_order')
+            ->orderBy('training_cards.sort_order')
+            ->orderBy('training_cards.id')
+            ->value('training_cards.id');
+
+        $url = $nextCardId
+            ? route('coach.training-library.index', ['card' => $nextCardId])
+            : route('coach.training-library.index');
+
+        return $this->respond($request, 'Training verwijderd.', $url);
     }
 
     /* ---------- BLOCKS ---------- */
@@ -150,9 +204,9 @@ class TrainingLibraryController extends Controller
 
         $block = TrainingBlock::create($data);
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $block->training_card_id])
-            ->with('status', 'Blok aangemaakt.');
+        $url = route('coach.training-library.index', ['card' => $block->training_card_id]);
+
+        return $this->respond($request, 'Blok aangemaakt.', $url);
     }
 
     public function updateBlock(TrainingBlock $block, Request $request)
@@ -165,19 +219,19 @@ class TrainingLibraryController extends Controller
 
         $block->update($data);
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $block->training_card_id])
-            ->with('status', 'Blok bijgewerkt.');
+        $url = route('coach.training-library.index', ['card' => $block->training_card_id]);
+
+        return $this->respond($request, 'Blok bijgewerkt.', $url);
     }
 
-    public function destroyBlock(TrainingBlock $block)
+    public function destroyBlock(TrainingBlock $block, Request $request)
     {
         $cardId = $block->training_card_id;
         $block->delete();
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $cardId])
-            ->with('status', 'Blok verwijderd.');
+        $url = route('coach.training-library.index', ['card' => $cardId]);
+
+        return $this->respond($request, 'Blok verwijderd.', $url);
     }
 
     /* ---------- ITEMS ---------- */
@@ -201,9 +255,9 @@ class TrainingLibraryController extends Controller
         $item->training_block_id = $block->id;
         $item->save();
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $block->training_card_id])
-            ->with('status', 'Item toegevoegd.');
+        $url = route('coach.training-library.index', ['card' => $block->training_card_id]);
+
+        return $this->respond($request, 'Item toegevoegd.', $url);
     }
 
     public function updateItem(TrainingItem $item, Request $request)
@@ -216,18 +270,18 @@ class TrainingLibraryController extends Controller
 
         $item->update($data);
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $item->block->training_card_id])
-            ->with('status', 'Item bijgewerkt.');
+        $url = route('coach.training-library.index', ['card' => $item->block->training_card_id]);
+
+        return $this->respond($request, 'Item bijgewerkt.', $url);
     }
 
-    public function destroyItem(TrainingItem $item)
+    public function destroyItem(TrainingItem $item, Request $request)
     {
         $cardId = $item->block->training_card_id;
         $item->delete();
 
-        return redirect()
-            ->route('coach.training-library.index', ['card' => $cardId])
-            ->with('status', 'Item verwijderd.');
+        $url = route('coach.training-library.index', ['card' => $cardId]);
+
+        return $this->respond($request, 'Item verwijderd.', $url);
     }
 }
