@@ -394,7 +394,7 @@
                   [
                     'key' => 'pakket_a',
                     'title' => 'Basis Pakket',
-                    'price' => ['label' => 'Vanaf 60,-', 'suffix' => '/ per 4 weken', 'total' => '≈ 180 totaal bij 24 weken'],
+                    'price' => ['label' => 'Vanaf 60,-', 'suffix' => '/ per 4 weken', 'total' => '≈ 180 totaal bij 12 weken'],
                     'badge' => '5,- korting per 4 weken bij 24 weken traject!',
                     'cta' => ['discount' => '5,- Korting'],
                     'price_12w' => 65,
