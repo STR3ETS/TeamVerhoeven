@@ -301,9 +301,11 @@
                   [
                     'key' => 'pakket_c',
                     'title' => 'Elite Hyrox Pakket',
-                    'price' => ['label' => 'Vanaf 120,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €360 totaal bij 12 weken'],
+                    'price' => ['label' => 'Vanaf 130,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €390 totaal bij 12 weken'],
                     'badge' => '10,- korting per 4 weken bij 24 weken traject!',
                     'cta' => ['discount' => '10,- Korting'],
+                    'price_12w' => 140,
+                    'price_24w' => 130,
                     'feature_groups' => [
                       ['title' => 'Dashboard','items' => [
                         ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
@@ -346,9 +348,11 @@
                   [
                     'key' => 'pakket_b',
                     'title' => 'Chasing Goals Pakket',
-                    'price' => ['label' => 'Vanaf 75,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €225 totaal bij 12 weken'],
-                    'badge' => '5,- korting per 4 weken bij 24 weken traject!',
-                    'cta' => ['discount' => '5,- Korting'],
+                    'price' => ['label' => 'Vanaf 80,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €240 totaal bij 12 weken'],
+                    'badge' => '10,- korting per 4 weken bij 24 weken traject!',
+                    'cta' => ['discount' => '10,- Korting'],
+                    'price_12w' => 90,
+                    'price_24w' => 80,
                     'feature_groups' => [
                       ['title' => 'Dashboard','items' => [
                         ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
@@ -390,9 +394,11 @@
                   [
                     'key' => 'pakket_a',
                     'title' => 'Basis Pakket',
-                    'price' => ['label' => 'Vanaf 50,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €150 totaal bij 12 weken'],
+                    'price' => ['label' => 'Vanaf 60,-', 'suffix' => '/ per 4 weken', 'total' => '≈ 180 totaal bij 24 weken'],
                     'badge' => '5,- korting per 4 weken bij 24 weken traject!',
                     'cta' => ['discount' => '5,- Korting'],
+                    'price_12w' => 65,
+                    'price_24w' => 60,
                     'feature_groups' => [
                       ['title' => 'Dashboard','items' => [
                         ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
