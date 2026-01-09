@@ -187,6 +187,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const REORDER_URL   = "{{ route('coach.clients.planning.reorder', $client) }}";
   const ACTIVE_WEEK   = window.__activeWeek || 1;
 
+  // ==== Soft reload helpers for library scroll position ====
+  const libraryScrollContainer = document.querySelector('.js-library .overflow-y-auto');
+  let savedLibraryScroll = 0;
+
+  function saveLibraryScroll() {
+    if (libraryScrollContainer) {
+      savedLibraryScroll = libraryScrollContainer.scrollTop;
+    }
+  }
+
+  function restoreLibraryScroll() {
+    if (libraryScrollContainer) {
+      libraryScrollContainer.scrollTop = savedLibraryScroll;
+    }
+  }
+
   // ==== Helpers ====
   const $  = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -289,6 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.innerHTML = '<i class="fa-solid fa-minus text-red-500 fa-sm"></i>';
 
     btn.addEventListener('click', async () => {
+      // Save library scroll position before remove action
+      saveLibraryScroll();
+      
       const assignmentId = cardEl.dataset.assignmentId || null;
       cardEl.remove();
       ensurePlaceholder(zone);
@@ -303,6 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
           persistZoneOrder(zone);
         } catch (e) { console.error(e); }
       }
+      
+      // Restore library scroll position after remove
+      requestAnimationFrame(() => restoreLibraryScroll());
+      
       if (window.ScrollTrigger) (window.__refreshPin?.() ?? ScrollTrigger.refresh());
     });
 
@@ -350,12 +373,19 @@ document.addEventListener('DOMContentLoaded', () => {
     cardEl.setAttribute('draggable', 'true');
 
     cardEl.addEventListener('dragstart', (e) => {
+      // Save library scroll position before drag
+      saveLibraryScroll();
+      
       const payload = { card_id: cardEl.dataset.cardId, title: cardEl.dataset.title };
       e.dataTransfer.setData('application/json', JSON.stringify(payload));
       e.dataTransfer.effectAllowed = 'copy';
       cardEl.classList.add('opacity-60');
     });
-    cardEl.addEventListener('dragend', () => cardEl.classList.remove('opacity-60'));
+    cardEl.addEventListener('dragend', () => {
+      cardEl.classList.remove('opacity-60');
+      // Restore library scroll position after drag
+      requestAnimationFrame(() => restoreLibraryScroll());
+    });
   });
 
   // ==== Dropzones (weekdagen) ====
@@ -405,6 +435,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const json = await res.json();
         temp.remove();
         addAssignedCard(zone, payload.card_id, json.assignment_id ?? null);
+        // Restore library scroll after successful drop
+        requestAnimationFrame(() => restoreLibraryScroll());
       } catch (err) {
         console.error(err);
         temp.remove();
