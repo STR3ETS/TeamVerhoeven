@@ -381,6 +381,10 @@
                 @yield('content')
             </div>
         </div>
+
+        {{-- Subscription Expiry Popup --}}
+        @include('components.subscription-expiry-popup')
+
         <script>
             const mobileMenu = document.getElementById('mobile-menu');
             document.getElementById('mobile-menu-open').addEventListener('click', function() {

@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
-<div class="max-w-3xl mx-auto" x-data="intakeWizard({{ json_encode($ak ?? []) }})" x-init="init()">
+<div class="max-w-3xl mx-auto" x-data="intakeWizard({{ json_encode($ak ?? []) }}, {{ json_encode($renewData ?? null) }}, {{ json_encode($isRenew ?? false) }})" x-init="init()">
   @if(request()->has('key'))
     <script>
       (function () {
@@ -35,6 +35,27 @@
         try {
           var url = new URL(window.location.href);
           url.searchParams.delete('key');
+          var qs = url.searchParams.toString();
+          var clean = url.pathname + (qs ? '?' + qs : '') + url.hash;
+          history.replaceState(null, '', clean);
+        } catch (e) {}
+      })();
+    </script>
+  @endif
+  @if($isRenew ?? false)
+    <script>
+      (function () {
+        try {
+          // Bij renew: localStorage opruimen zodat we met schone lei beginnen
+          localStorage.removeItem('intakeWizard_v1');
+          sessionStorage.removeItem('intakePending');
+          sessionStorage.removeItem('intakeConfirmed');
+        } catch (e) {}
+
+        // Renew parameter uit URL strippen na verwerking
+        try {
+          var url = new URL(window.location.href);
+          url.searchParams.delete('renew');
           var qs = url.searchParams.toString();
           var clean = url.pathname + (qs ? '?' + qs : '') + url.hash;
           history.replaceState(null, '', clean);
@@ -59,6 +80,12 @@
     Goed om je te zien en welkom bij 2BeFit Coaching X Team Verhoeven<br class="hidden md:block">
     Laten we even je persoonlijke profiel samenstellen. Op basis hiervan worden de trainingen samengesteld.
   </p>
+  @if($isRenew ?? false)
+    <div class="mb-4 rounded-xl border border-blue-300 bg-blue-50 text-blue-800 p-3 text-sm">
+      <strong><i class="fa-solid fa-arrow-rotate-right mr-1"></i> Abonnement verlengen</strong><br>
+      Je persoonlijke gegevens en coach voorkeur zijn al ingevuld. Kies een nieuw pakket en vul de rest van de intake in om je abonnement te verlengen.
+    </div>
+  @endif
   @if(!empty($ak))
     <div class="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 p-3 text-sm">
       <strong>Key geactiveerd:</strong><br>
@@ -1073,13 +1100,14 @@
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
   // Intake wizard – versie met key-ondersteuning (ak) om stap 2 te skippen/forceren
-  // Gebruik in Blade: x-data="intakeWizard({{ json_encode($ak ?? []) }})"
-  function intakeWizard(ak = null) {
+  // Gebruik in Blade: x-data="intakeWizard({{ json_encode($ak ?? []) }}, {{ json_encode($renewData ?? null) }}, {{ json_encode($isRenew ?? false) }})"
+  function intakeWizard(ak = null, renewData = null, isRenew = false) {
     const STORAGE_KEY = 'intakeWizard_v1';
 
     return {
       // --- flags vanuit server ---
       hasKey: !!(ak && ak.package && ak.duration),
+      isRenew: !!isRenew,
 
       // --- state ---
       isPaying: false,
@@ -1150,7 +1178,26 @@
           this.form.duration = ak.duration;
         }
 
-        this.loadState();
+        // Bij renew: vul persoonlijke gegevens en coach voorkeur in vanuit server data
+        // en start bij stap 2 (pakket keuze)
+        if (this.isRenew && renewData) {
+          // Vul persoonlijke gegevens in (stap 0)
+          this.form.name = renewData.name || '';
+          this.form.email = renewData.email || '';
+          this.form.phone = renewData.phone || '';
+          this.form.dob = renewData.dob || '';
+          this.form.gender = renewData.gender || '';
+          this.form.street = renewData.street || '';
+          this.form.house_number = renewData.house_number || '';
+          this.form.postcode = renewData.postcode || '';
+          // Coach voorkeur (stap 1)
+          this.form.preferred_coach = renewData.preferred_coach || '';
+          // Start bij pakket keuze (stap 2)
+          this.step = 2;
+          this.saveState();
+        } else {
+          this.loadState();
+        }
 
         const params=new URLSearchParams(window.location.search);
         const urlStep=parseInt(params.get('step')||'',10);
