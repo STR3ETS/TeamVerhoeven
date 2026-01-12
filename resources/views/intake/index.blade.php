@@ -149,8 +149,8 @@
                    :class="errors.dob ? 'border-red-500 focus:border-red-500' : ''">
           </div>
 
-          {{-- Startdatum: verberg bij renew, wordt dan getoond bij pakket stap --}}
-          <div x-show="!isRenew">
+          {{-- Startdatum: altijd tonen op normale plek --}}
+          <div>
             <p class="text-sm font-medium text-black mb-1">Wanneer wil je beginnen?</p>
             <input id="start_date" type="date" name="start_date" x-model="form.start_date" required
                   class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
