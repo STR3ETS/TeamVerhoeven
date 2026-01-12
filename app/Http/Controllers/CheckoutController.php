@@ -171,13 +171,46 @@ class CheckoutController extends Controller
         ];
 
         // 4) Draft Intake + pending Order
-        [$intake, $order] = DB::transaction(function () use ($payload, $data, $unitAmountCents) {
-            $intake = Intake::create([
-                'client_id'  => null,
-                'status'     => 'active',
-                'payload'    => $payload,
-                'start_date' => $data['start_date'],   // 👈 HIER OPSLAAN
-            ]);
+        // Bij renew (ingelogde user) update bestaande intake, anders maak nieuwe
+        $user = $request->user();
+        $isRenew = $user && $user->role === 'client' && session('subscription_renew', false);
+
+        [$intake, $order] = DB::transaction(function () use ($payload, $data, $unitAmountCents, $user, $isRenew) {
+            if ($isRenew && $user) {
+                // Update bestaande intake bij renew
+                $intake = Intake::where('client_id', $user->id)
+                    ->orderByDesc('id')
+                    ->first();
+                
+                if ($intake) {
+                    $intake->payload = $payload;
+                    $intake->start_date = $data['start_date'];
+                    $intake->status = 'active';
+                    $intake->completed_at = null;
+                    $intake->save();
+                    
+                    Log::info('[checkout.create] updated existing intake for renew', [
+                        'intake_id' => $intake->id,
+                        'user_id' => $user->id,
+                    ]);
+                } else {
+                    // Fallback: maak nieuwe als geen bestaande gevonden
+                    $intake = Intake::create([
+                        'client_id'  => $user->id,
+                        'status'     => 'active',
+                        'payload'    => $payload,
+                        'start_date' => $data['start_date'],
+                    ]);
+                }
+            } else {
+                // Normale flow: nieuwe intake maken
+                $intake = Intake::create([
+                    'client_id'  => $user?->id ?? null,
+                    'status'     => 'active',
+                    'payload'    => $payload,
+                    'start_date' => $data['start_date'],
+                ]);
+            }
 
             $order = Order::create([
                 'client_id'    => null,
@@ -355,6 +388,7 @@ class CheckoutController extends Controller
             if ($forceFake) {
                 session()->forget('ak'); // key niet hergebruiken binnen dezelfde sessie
             }
+            session()->forget('subscription_renew'); // Reset renew flag na FAKE checkout
 
             // Door naar intake (stap 3) zonder Stripe
             return response()->json([
@@ -606,6 +640,9 @@ class CheckoutController extends Controller
                 'order_id'     => $order?->id,
                 'order_status' => $order?->status,
             ]);
+
+            // Reset subscription renew flag na succesvolle betaling
+            session()->forget('subscription_renew');
 
             // Mailchimp sync NA commit (échte betaling)
             try {
