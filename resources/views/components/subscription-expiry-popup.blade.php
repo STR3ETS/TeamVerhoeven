@@ -1,9 +1,10 @@
 {{-- Subscription Expiry Popup Component --}}
-{{-- Wordt getoond wanneer abonnement binnen 7 dagen verloopt, alleen bij nieuwe login --}}
+{{-- Wordt getoond wanneer abonnement binnen 7 dagen verloopt of al verlopen is --}}
+{{-- Bij verlopen: popup is niet wegklikbaar (geen "later beslissen") --}}
 @auth
 @if(auth()->user()->role === 'client')
 <div x-data="subscriptionExpiryPopup()" x-init="checkExpiry()" x-cloak>
-    {{-- Overlay --}}
+    {{-- Overlay - bij verlopen niet klikbaar om te sluiten --}}
     <div x-show="showPopup" 
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
@@ -11,7 +12,8 @@
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
+         class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4"
+         :class="{ 'bg-black/70': isExpired }">
         
         {{-- Popup Content --}}
         <div x-show="showPopup"
@@ -23,15 +25,15 @@
              x-transition:leave-end="opacity-0 scale-95"
              class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
             
-            {{-- Header --}}
-            <div class="bg-[#c8ab7a] px-6 py-4">
+            {{-- Header - rood bij verlopen --}}
+            <div class="px-6 py-4" :class="isExpired ? 'bg-red-500' : 'bg-[#c8ab7a]'">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                        <i class="fa-solid fa-clock text-white text-xl"></i>
+                        <i class="text-white text-xl" :class="isExpired ? 'fa-solid fa-exclamation-triangle' : 'fa-solid fa-clock'"></i>
                     </div>
                     <div>
-                        <h2 class="text-white font-bold text-lg">Abonnement verloopt</h2>
-                        <p class="text-white/80 text-sm" x-text="isExpired ? 'Je abonnement is verlopen' : 'Nog ' + daysRemaining + ' dagen over'"></p>
+                        <h2 class="text-white font-bold text-lg" x-text="isExpired ? 'Abonnement verlopen' : 'Abonnement verloopt'"></h2>
+                        <p class="text-white/80 text-sm" x-text="isExpired ? 'Je hebt geen actief abonnement meer' : 'Nog ' + daysRemaining + ' dagen over'"></p>
                     </div>
                 </div>
             </div>
@@ -63,8 +65,9 @@
                         <span x-text="loading === 'renew' ? 'Bezig...' : 'Verlengen'"></span>
                     </button>
 
-                    {{-- Later beslissen --}}
-                    <button @click="dismissPopup()" 
+                    {{-- Later beslissen - ALLEEN tonen als nog niet verlopen --}}
+                    <button x-show="!isExpired"
+                            @click="dismissPopup()" 
                             :disabled="loading"
                             class="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-clock"></i>

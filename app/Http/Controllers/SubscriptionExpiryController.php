@@ -17,8 +17,9 @@ use Stripe\StripeClient;
 class SubscriptionExpiryController extends Controller
 {
     /**
-     * Check of het abonnement van de client binnen 7 dagen verloopt.
-     * Dit wordt gecalled bij elke pagina load voor ingelogde clients.
+     * Check of het abonnement van de client binnen 7 dagen verloopt of al verlopen is.
+     * - Bijna verlopen: popup 1x per login sessie (kan wegklikken met "later beslissen")
+     * - Al verlopen: popup ALTIJD tonen (kan niet wegklikken)
      */
     public function check(Request $request)
     {
@@ -26,11 +27,6 @@ class SubscriptionExpiryController extends Controller
 
         // Alleen clients hebben abonnementen
         if (!$user || $user->role !== 'client') {
-            return response()->json(['show_popup' => false]);
-        }
-
-        // Check of popup al getoond is deze login sessie
-        if (session('subscription_popup_shown', false)) {
             return response()->json(['show_popup' => false]);
         }
 
@@ -54,19 +50,27 @@ class SubscriptionExpiryController extends Controller
         $periodWeeks = (int) ($profile->period_weeks ?? 12);
         $endDate = $startDate->copy()->addWeeks($periodWeeks);
 
-        // Check of we binnen 7 dagen van de einddatum zijn
+        // Check of we binnen 7 dagen van de einddatum zijn of al verlopen
         $now = Carbon::now();
         $daysUntilExpiry = $now->diffInDays($endDate, false); // negative als al verlopen
+        $isExpired = $daysUntilExpiry < 0;
 
+        // Bij verlopen abonnement: ALTIJD popup tonen (niet wegklikbaar)
+        // Bij bijna verlopen: alleen als popup nog niet getoond is deze sessie
         if ($daysUntilExpiry <= 7 && $daysUntilExpiry >= -30) {
-            // Toon popup als binnen 7 dagen van expiry (of max 30 dagen erna)
+            // Als verlopen: negeer session check, popup altijd tonen
+            // Als bijna verlopen: check session flag
+            if (!$isExpired && session('subscription_popup_shown', false)) {
+                return response()->json(['show_popup' => false]);
+            }
+
             return response()->json([
                 'show_popup' => true,
                 'days_remaining' => max(0, $daysUntilExpiry),
                 'end_date' => $endDate->format('d-m-Y'),
                 'package' => $latestIntake->payload['package'] ?? 'pakket_a',
                 'period_weeks' => $periodWeeks,
-                'is_expired' => $daysUntilExpiry < 0,
+                'is_expired' => $isExpired,
             ]);
         }
 
@@ -224,18 +228,19 @@ class SubscriptionExpiryController extends Controller
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            // 3. Verwijder de gebruiker (cascade delete zal gerelateerde data verwijderen)
+            // 3. Verwijder de gebruiker en alle gerelateerde data expliciet
             DB::transaction(function () use ($userId) {
+                // Expliciet alle gerelateerde records verwijderen (voor het geval cascade niet werkt)
+                TrainingAssignment::where('user_id', $userId)->delete();
+                Intake::where('client_id', $userId)->delete();
+                Order::where('client_id', $userId)->delete();
+                ClientProfile::where('user_id', $userId)->delete();
+                
+                // Nu de user zelf verwijderen
                 $userToDelete = User::find($userId);
                 if ($userToDelete) {
-                    // Training assignments expliciet verwijderen (voor het geval cascade niet werkt)
-                    TrainingAssignment::where('user_id', $userId)->delete();
-                    
-                    // De foreign keys met cascadeOnDelete zorgen ervoor dat
-                    // client_profiles, intakes, orders, etc. automatisch verwijderd worden
                     $userToDelete->delete();
-                    
-                    Log::info('[subscription.delete] user deleted', ['user_id' => $userId]);
+                    Log::info('[subscription.delete] user and all related data deleted', ['user_id' => $userId]);
                 }
             });
 

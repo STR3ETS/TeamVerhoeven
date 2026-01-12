@@ -364,7 +364,7 @@
                         ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
                       ]],
                       ['title' => 'Kortingen + Prijzen','items' => [
-                        ['text' => '10% militair / veteraan korting', 'on' => true],
+                        // ['text' => '10% militair / veteraan korting', 'on' => true],
                         ['text' => '15% 2BeFit Supplements korting', 'on' => true],
                         ['text' => '15% PT 2BeFit korting', 'on' => true],
                         ['text' => '25% Duo PT 2BeFit korting', 'on' => true],
@@ -411,7 +411,7 @@
                         ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
                       ]],
                       ['title' => 'Kortingen + Prijzen','items' => [
-                        ['text' => '10% militair / veteraan korting', 'on' => true],
+                        // ['text' => '10% militair / veteraan korting', 'on' => true],
                         ['text' => '15% 2BeFit Supplements korting', 'on' => true],
                         ['text' => '10% PT 2BeFit korting', 'on' => true],
                         ['text' => 'Prijs per 4 weken', 'on' => true],
@@ -457,7 +457,7 @@
                         ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => false],
                       ]],
                       ['title' => 'Kortingen + Prijzen','items' => [
-                        ['text' => '10% militair / veteraan korting', 'on' => true],
+                        // ['text' => '10% militair / veteraan korting', 'on' => true],
                         ['text' => 'Prijs per 4 weken', 'on' => true],
                       ]],
                     ],
