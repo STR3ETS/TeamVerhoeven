@@ -69,8 +69,9 @@ class PurgeExpiredUsers extends Command
             $periodWeeks = (int) ($profile->period_weeks ?? 12);
             $endDate = $startDate->copy()->addWeeks($periodWeeks);
 
-            // Check of meer dan 1 dag verlopen
-            $daysExpired = $now->diffInDays($endDate, false); // negative als verlopen
+            // Check of meer dan 1 dag verlopen (conservatieve afronding met floor)
+            $daysExpiredRaw = $now->diffInDays($endDate, false); // negative als verlopen
+            $daysExpired = (int) floor($daysExpiredRaw);
 
             if ($daysExpired < -1) {
                 // Meer dan 1 dag verlopen

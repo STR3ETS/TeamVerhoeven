@@ -52,7 +52,10 @@ class SubscriptionExpiryController extends Controller
 
         // Check of we binnen 7 dagen van de einddatum zijn of al verlopen
         $now = Carbon::now();
-        $daysUntilExpiry = $now->diffInDays($endDate, false); // negative als al verlopen
+        $daysUntilExpiryRaw = $now->diffInDays($endDate, false); // negative als al verlopen
+        
+        // Conservatieve afronding: floor() voor hele dagen
+        $daysUntilExpiry = (int) floor($daysUntilExpiryRaw);
         $isExpired = $daysUntilExpiry < 0;
 
         // Bij verlopen abonnement: ALTIJD popup tonen (niet wegklikbaar)
@@ -66,14 +69,14 @@ class SubscriptionExpiryController extends Controller
 
             // Bereken dagen tot automatische verwijdering (1 dag na expiry)
             // Als abonnement verlopen is op dag X, wordt account verwijderd na dag X+1
-            // Dus: dagen tot verwijdering = 1 - (dagen verlopen)
+            // Dus: dagen tot verwijdering = 1 - abs(dagen verlopen)
             // Bijv: 0 dagen verlopen = 1 dag tot verwijdering
             //       1 dag verlopen = 0 dagen (wordt vandaag verwijderd)
-            $daysUntilPurge = $isExpired ? max(0, 1 + $daysUntilExpiry) : null;
+            $daysUntilPurge = $isExpired ? (int) max(0, 1 + $daysUntilExpiry) : null;
 
             return response()->json([
                 'show_popup' => true,
-                'days_remaining' => max(0, $daysUntilExpiry),
+                'days_remaining' => (int) max(0, $daysUntilExpiry),
                 'end_date' => $endDate->format('d-m-Y'),
                 'package' => $latestIntake->payload['package'] ?? 'pakket_a',
                 'period_weeks' => $periodWeeks,
