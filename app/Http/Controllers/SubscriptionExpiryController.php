@@ -64,6 +64,13 @@ class SubscriptionExpiryController extends Controller
                 return response()->json(['show_popup' => false]);
             }
 
+            // Bereken dagen tot automatische verwijdering (1 dag na expiry)
+            // Als abonnement verlopen is op dag X, wordt account verwijderd na dag X+1
+            // Dus: dagen tot verwijdering = 1 - (dagen verlopen)
+            // Bijv: 0 dagen verlopen = 1 dag tot verwijdering
+            //       1 dag verlopen = 0 dagen (wordt vandaag verwijderd)
+            $daysUntilPurge = $isExpired ? max(0, 1 + $daysUntilExpiry) : null;
+
             return response()->json([
                 'show_popup' => true,
                 'days_remaining' => max(0, $daysUntilExpiry),
@@ -71,6 +78,7 @@ class SubscriptionExpiryController extends Controller
                 'package' => $latestIntake->payload['package'] ?? 'pakket_a',
                 'period_weeks' => $periodWeeks,
                 'is_expired' => $isExpired,
+                'days_until_purge' => $daysUntilPurge,
             ]);
         }
 

@@ -149,7 +149,8 @@
                    :class="errors.dob ? 'border-red-500 focus:border-red-500' : ''">
           </div>
 
-          <div>
+          {{-- Startdatum: verberg bij renew, wordt dan getoond bij pakket stap --}}
+          <div x-show="!isRenew">
             <p class="text-sm font-medium text-black mb-1">Wanneer wil je beginnen?</p>
             <input id="start_date" type="date" name="start_date" x-model="form.start_date" required
                   class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
@@ -321,6 +322,21 @@
         </div>
 
         <div class="relative mb-6">
+          {{-- Bij renew: toon startdatum veld hier ipv stap 0 --}}
+          <template x-if="isRenew">
+            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <p class="text-sm font-medium text-black mb-2">
+                <i class="fa-solid fa-calendar-days mr-1 text-blue-500"></i>
+                Wanneer wil je je nieuwe traject starten?
+              </p>
+              <input id="start_date_renew" type="date" name="start_date" x-model="form.start_date" required
+                     class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
+                            border-gray-300 hover:border-[#c7c7c7]"
+                     :class="errors.start_date ? 'border-red-500 focus:border-red-500' : ''">
+              <p class="text-xs text-gray-500 mt-1">Kies een maandag als startdatum</p>
+            </div>
+          </template>
+
           <div class="swiper packages-swiper px-6">
             <div class="swiper-wrapper">
               @php

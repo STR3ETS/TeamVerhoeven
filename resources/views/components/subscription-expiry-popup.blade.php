@@ -50,6 +50,24 @@
                         is verlopen op <span class="font-semibold" x-text="endDate"></span>.
                     </span>
                 </p>
+
+                {{-- Waarschuwing bij verlopen abonnement --}}
+                <template x-if="isExpired">
+                    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-red-700 text-sm font-medium">
+                            <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                            <span x-show="daysUntilPurge > 0">
+                                Je hebt nog <span class="font-bold" x-text="daysUntilPurge"></span> dag<span x-show="daysUntilPurge !== 1">en</span> om actie te ondernemen.
+                            </span>
+                            <span x-show="daysUntilPurge === 0">
+                                Dit is je laatste dag om actie te ondernemen!
+                            </span>
+                        </p>
+                        <p class="text-red-600 text-xs mt-1">
+                            Als je geen keuze maakt, wordt je account automatisch verwijderd.
+                        </p>
+                    </div>
+                </template>
                 
                 <p class="text-gray-600 text-sm mb-6">
                     Wat wil je doen?
@@ -149,6 +167,7 @@ function subscriptionExpiryPopup() {
         packageName: '',
         periodWeeks: 12,
         isExpired: false,
+        daysUntilPurge: null,
 
         get packageLabel() {
             const labels = {
@@ -177,6 +196,7 @@ function subscriptionExpiryPopup() {
                     this.packageName = data.package;
                     this.periodWeeks = data.period_weeks;
                     this.isExpired = data.is_expired;
+                    this.daysUntilPurge = data.days_until_purge;
                     this.showPopup = true;
                 }
             } catch (error) {
