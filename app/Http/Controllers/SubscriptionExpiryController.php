@@ -18,8 +18,16 @@ class SubscriptionExpiryController extends Controller
 {
     /**
      * Check of het abonnement van de client binnen 7 dagen verloopt of al verlopen is.
-     * - Bijna verlopen: popup 1x per login sessie (kan wegklikken met "later beslissen")
-     * - Al verlopen: popup ALTIJD tonen (kan niet wegklikken)
+     * 
+     * WAARSCHUWING (<=7 dagen over, niet verlopen):
+     * - Informatieve popup met "Begrepen" knop
+     * - Kan 1x per sessie worden getoond
+     * - Geen verlengen/verwijderen opties
+     * 
+     * VERLOPEN (0 of minder dagen over):
+     * - Popup met verlengen/verwijderen knoppen
+     * - Kan NIET worden weggeklikt
+     * - Wordt ALTIJD getoond (geen session check)
      */
     public function check(Request $request)
     {
@@ -58,21 +66,14 @@ class SubscriptionExpiryController extends Controller
         $daysUntilExpiry = (int) floor($daysUntilExpiryRaw);
         $isExpired = $daysUntilExpiry < 0;
 
-        // Bij verlopen abonnement: ALTIJD popup tonen (niet wegklikbaar)
-        // Bij bijna verlopen: alleen als popup nog niet getoond is deze sessie
-        if ($daysUntilExpiry <= 7 && $daysUntilExpiry >= -30) {
+        // Bij verlopen abonnement: ALTIJD popup tonen (niet wegklikbaar, met verlengen/verwijderen)
+        // Bij bijna verlopen (<=7 dagen): alleen informatieve popup met "Begrepen" knop
+        if ($daysUntilExpiry <= 7 && $daysUntilExpiry >= -365) {
             // Als verlopen: negeer session check, popup altijd tonen
-            // Als bijna verlopen: check session flag
+            // Als bijna verlopen: check session flag (kan wegklikken met "Begrepen")
             if (!$isExpired && session('subscription_popup_shown', false)) {
                 return response()->json(['show_popup' => false]);
             }
-
-            // Bereken dagen tot automatische verwijdering (1 dag na expiry)
-            // Als abonnement verlopen is op dag X, wordt account verwijderd na dag X+1
-            // Dus: dagen tot verwijdering = 1 - abs(dagen verlopen)
-            // Bijv: 0 dagen verlopen = 1 dag tot verwijdering
-            //       1 dag verlopen = 0 dagen (wordt vandaag verwijderd)
-            $daysUntilPurge = $isExpired ? (int) max(0, 1 + $daysUntilExpiry) : null;
 
             return response()->json([
                 'show_popup' => true,
@@ -81,7 +82,6 @@ class SubscriptionExpiryController extends Controller
                 'package' => $latestIntake->payload['package'] ?? 'pakket_a',
                 'period_weeks' => $periodWeeks,
                 'is_expired' => $isExpired,
-                'days_until_purge' => $daysUntilPurge,
             ]);
         }
 

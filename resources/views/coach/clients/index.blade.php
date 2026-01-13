@@ -35,13 +35,17 @@
           <th class="px-3 py-2 text-left">Klant</th>
           <th class="px-3 py-2 text-left">E-mail</th>
           <th class="px-3 py-2 text-left">Telefoonnummer</th>
+          <th class="px-3 py-2 text-center">Status</th>
           <th class="px-3 py-2 text-right">Acties</th>
         </tr>
       </thead>
   
       <tbody class="divide-y divide-gray-100">
         @forelse ($clients as $c)
-          @php $p = $c->clientProfile; @endphp
+          @php 
+            $p = $c->clientProfile; 
+            $status = $c->subscription_status ?? ['is_active' => false, 'label' => 'Onbekend'];
+          @endphp
           <tr>
             {{-- Klant --}}
             <td class="px-3 py-2">
@@ -57,6 +61,23 @@
             <td class="px-3 py-2">
               <a href="tel:{{ $c->clientProfile->phone_e164 }}" class="hover:underline">{{ $c->clientProfile->phone_e164 }}</a>
             </td>
+
+            {{-- Status Label --}}
+            <td class="px-3 py-2 text-center">
+              @if($status['is_active'])
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100/80 text-green-700 backdrop-blur-sm border border-green-200/50"
+                      title="Verloopt op {{ $status['end_date'] ?? 'onbekend' }}">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  Actief
+                </span>
+              @else
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100/80 text-red-700 backdrop-blur-sm border border-red-200/50"
+                      title="Verlopen op {{ $status['end_date'] ?? 'onbekend' }}">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                  Verlopen
+                </span>
+              @endif
+            </td>
   
             {{-- Acties --}}
             <td class="px-3 py-2 text-right">
@@ -68,7 +89,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="4" class="px-3 py-6 text-center text-gray-500">
+            <td colspan="5" class="px-3 py-6 text-center text-gray-500">
               Geen cliënten gevonden.
             </td>
           </tr>
