@@ -25,11 +25,11 @@
              x-transition:leave-end="opacity-0 scale-95"
              class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
             
-            {{-- Header - goud bij waarschuwing, rood bij verlopen --}}
-            <div class="px-6 py-4" :class="isExpired ? 'bg-red-500' : 'bg-[#c8ab7a]'">
+            {{-- Header - rood bij waarschuwing en verlopen --}}
+            <div class="px-6 py-4 bg-red-500">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                        <i class="text-white text-xl" :class="isExpired ? 'fa-solid fa-exclamation-triangle' : 'fa-solid fa-bell'"></i>
+                        <i class="text-white text-xl" :class="isExpired ? 'fa-solid fa-exclamation-triangle' : 'fa-solid fa-exclamation-triangle'"></i>
                     </div>
                     <div>
                         <h2 class="text-white font-bold text-lg" x-text="isExpired ? 'Abonnement verlopen' : 'Abonnement verloopt binnenkort'"></h2>
@@ -48,8 +48,8 @@
                             verloopt op <span class="font-semibold" x-text="endDate"></span>.
                         </p>
                         
-                        <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p class="text-amber-700 text-sm">
+                        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-red-700 text-sm">
                                 <i class="fa-solid fa-info-circle mr-1"></i>
                                 Dit is een herinnering. Wanneer je abonnement is verlopen, kun je kiezen om te verlengen of je account te verwijderen.
                             </p>

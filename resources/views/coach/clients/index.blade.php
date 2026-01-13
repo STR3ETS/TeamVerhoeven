@@ -35,7 +35,7 @@
           <th class="px-3 py-2 text-left">Klant</th>
           <th class="px-3 py-2 text-left">E-mail</th>
           <th class="px-3 py-2 text-left">Telefoonnummer</th>
-          <th class="px-3 py-2 text-center">Status</th>
+          <th class="px-3 py-2 text-left">Status</th>
           <th class="px-3 py-2 text-right">Acties</th>
         </tr>
       </thead>
@@ -63,7 +63,7 @@
             </td>
 
             {{-- Status Label --}}
-            <td class="px-3 py-2 text-center">
+            <td class="px-3 py-2 text-left">
               @if($status['is_active'])
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100/80 text-green-700 backdrop-blur-sm border border-green-200/50"
                       title="Verloopt op {{ $status['end_date'] ?? 'onbekend' }}">
