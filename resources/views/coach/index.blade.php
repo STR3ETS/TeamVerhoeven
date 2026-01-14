@@ -12,15 +12,20 @@
     $coach = auth()->user();
     $today = now()->toDateString();
 
-    // Nieuwe clients van vandaag:
+    // Nieuwe clients van vandaag OF verlengingen vandaag:
     // - users.role = 'client'
-    // - users.created_at = vandaag
+    // - users.created_at = vandaag (nieuwe aanmelding)
+    //   OF subscription_renewals.first_renewed_at = vandaag (verlenging)
     // - EN óf nog geen coach (coach_id = null)
     //   óf al gekoppeld aan deze coach (coach_id = huidige user id)
     $newClients = DB::table('users')
         ->leftJoin('client_profiles', 'client_profiles.user_id', '=', 'users.id')
+        ->leftJoin('subscription_renewals', 'subscription_renewals.user_id', '=', 'users.id')
         ->where('users.role', 'client')
-        ->whereDate('users.created_at', $today)
+        ->where(function ($q) use ($today) {
+            $q->whereDate('users.created_at', $today)  // Nieuwe aanmeldingen vandaag
+              ->orWhereDate('subscription_renewals.first_renewed_at', $today);  // OF verlengingen vandaag
+        })
         ->where(function ($q) use ($coach) {
             $q->whereNull('client_profiles.coach_id')
               ->orWhere('client_profiles.coach_id', $coach->id);
@@ -30,7 +35,8 @@
             'users.name',
             'users.email',
             'users.created_at',
-            'client_profiles.coach_id'
+            'client_profiles.coach_id',
+            'subscription_renewals.first_renewed_at as renewed_at'
         )
         ->orderByDesc('users.created_at')
         ->get();
@@ -72,7 +78,9 @@
         <div class="space-y-3">
             @foreach($newClients as $client)
                 @php
-                    $isRenewal = SubscriptionRenewal::hasRenewed($client->id);
+                    // Check of dit een verlenging is (renewed_at is vandaag)
+                    $isRenewal = !empty($client->renewed_at);
+                    $isNewToday = \Carbon\Carbon::parse($client->created_at)->isToday();
                 @endphp
                 <div class="p-4 bg-[#fffaf0] border border-[#c8ab7a]/40 rounded-2xl flex flex-col md:flex-row items-start justify-between gap-3">
                     <div>
@@ -89,8 +97,13 @@
                         </div>
 
                         <p class="text-xs text-gray-600">
-                            Aangemeld op
-                            {{ \Carbon\Carbon::parse($client->created_at)->format('d-m-Y H:i') }}
+                            @if($isRenewal && !$isNewToday)
+                                Verlengd op
+                                {{ \Carbon\Carbon::parse($client->renewed_at)->format('d-m-Y H:i') }}
+                            @else
+                                Aangemeld op
+                                {{ \Carbon\Carbon::parse($client->created_at)->format('d-m-Y H:i') }}
+                            @endif
                             @if(!empty($client->email))
                                 · {{ $client->email }}
                             @endif
