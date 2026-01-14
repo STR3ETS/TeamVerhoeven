@@ -6,6 +6,7 @@
 @php
     use App\Models\User;
     use App\Models\Order;
+    use App\Models\SubscriptionRenewal;
     use Illuminate\Support\Facades\DB;
 
     $coach = auth()->user();
@@ -70,10 +71,21 @@
 
         <div class="space-y-3">
             @foreach($newClients as $client)
+                @php
+                    $isRenewal = SubscriptionRenewal::hasRenewed($client->id);
+                @endphp
                 <div class="p-4 bg-[#fffaf0] border border-[#c8ab7a]/40 rounded-2xl flex flex-col md:flex-row items-start justify-between gap-3">
                     <div>
-                        <div class="font-semibold text-[#c8ab7a]">
-                            {{ $client->name ?? 'Onbekende klant' }}
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-[#c8ab7a]">
+                                {{ $client->name ?? 'Onbekende klant' }}
+                            </span>
+                            @if($isRenewal)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 border border-green-200">
+                                    <i class="fa-solid fa-rotate-right mr-1 text-[8px]"></i>
+                                    Verlenging
+                                </span>
+                            @endif
                         </div>
 
                         <p class="text-xs text-gray-600">

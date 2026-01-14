@@ -7,6 +7,7 @@ use App\Models\ClientProfile;
 use App\Models\Intake;
 use App\Models\Order;
 use App\Models\TrainingAssignment;
+use App\Models\SubscriptionRenewal;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -188,6 +189,11 @@ class SubscriptionExpiryController extends Controller
 
                     Log::info('[subscription.renew] intake reset', ['intake_id' => $intake->id]);
                 }
+
+                // 5. Registreer deze verlenging in subscription_renewals tabel
+                // Dit wordt gebruikt voor het "Verlenging" label in het coach dashboard
+                SubscriptionRenewal::recordRenewal($user->id);
+                Log::info('[subscription.renew] renewal recorded', ['user_id' => $user->id]);
             });
 
             // Markeer popup als getoond
