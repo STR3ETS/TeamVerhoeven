@@ -54,7 +54,7 @@ class CoachClientController extends Controller
     /**
      * Bereken de abonnementsstatus voor een client.
      * 
-     * @return array{is_active: bool, label: string, days_remaining: int|null}
+     * @return array{is_active: bool, label: string, days_remaining: int|null, end_date: string|null}
      */
     private function calculateSubscriptionStatus(User $client, $intakes): array
     {
@@ -67,6 +67,7 @@ class CoachClientController extends Controller
                 'is_active' => false,
                 'label' => 'Onbekend',
                 'days_remaining' => null,
+                'end_date' => null,
             ];
         }
 

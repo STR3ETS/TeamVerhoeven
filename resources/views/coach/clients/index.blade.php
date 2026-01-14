@@ -36,7 +36,7 @@
           <th class="px-3 py-2 text-left">E-mail</th>
           <th class="px-3 py-2 text-left">Telefoonnummer</th>
           <th class="px-3 py-2 text-left">Status</th>
-          <th class="px-3 py-2 text-right">Acties</th>
+          <th class="px-3 py-2 text-left">Verloopt op</th>
         </tr>
       </thead>
   
@@ -44,22 +44,30 @@
         @forelse ($clients as $c)
           @php 
             $p = $c->clientProfile; 
-            $status = $c->subscription_status ?? ['is_active' => false, 'label' => 'Onbekend'];
+            $status = $c->subscription_status ?? ['is_active' => false, 'label' => 'Onbekend', 'end_date' => null];
           @endphp
-          <tr>
+          <tr class="cursor-pointer hover:bg-gray-50 transition duration-150 group" 
+              onclick="window.location='{{ route('coach.clients.show', $c) }}'"
+              tabindex="0"
+              role="button"
+              aria-label="Bekijk details van {{ $c->name }}"
+              onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.location='{{ route('coach.clients.show', $c) }}'; }">
             {{-- Klant --}}
             <td class="px-3 py-2">
-              <div class="font-medium">{{ $c->name }}</div>
+              <div class="font-medium flex items-center gap-2">
+                {{ $c->name }}
+                <i class="fa-solid fa-arrow-right text-[#c8ab7a] text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-150"></i>
+              </div>
             </td>
   
             {{-- E-mail --}}
             <td class="px-3 py-2">
-              <a href="mailto:{{ $c->email }}" class="hover:underline">{{ $c->email }}</a>
+              <span class="text-gray-700">{{ $c->email }}</span>
             </td>
 
             {{-- Telefoonnummer --}}
             <td class="px-3 py-2">
-              <a href="tel:{{ $c->clientProfile->phone_e164 }}" class="hover:underline">{{ $c->clientProfile->phone_e164 }}</a>
+              <span class="text-gray-700">{{ $c->clientProfile->phone_e164 }}</span>
             </td>
 
             {{-- Status Label --}}
@@ -79,12 +87,13 @@
               @endif
             </td>
   
-            {{-- Acties --}}
-            <td class="px-3 py-2 text-right">
-              <a href="{{ route('coach.clients.show', $c) }}" class="inline-block text-[#c8ab7a] font-semibold text-xs">
-                Bekijken
-                <i class="fa-solid fa-arrow-right-long ml-2"></i>
-              </a>
+            {{-- Verloopt op (einddatum) --}}
+            <td class="px-3 py-2 text-left">
+              @if($status['end_date'])
+                <span class="text-gray-700 font-medium">{{ $status['end_date'] }}</span>
+              @else
+                <span class="text-gray-400 text-xs">Onbekend</span>
+              @endif
             </td>
           </tr>
         @empty
