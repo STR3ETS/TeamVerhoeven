@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\ClientProfile;
+use App\Models\Intake;
 use App\Services\UhvCalculator;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CoachClientController extends Controller
 {
     /**
      * Lijst met cliënten (eenvoudig filter op naam/email).
+     * Inclusief abonnementsstatus (actief/verlopen) berekening.
      */
     public function index(Request $request)
     {
@@ -32,7 +35,55 @@ class CoachClientController extends Controller
             ->orderBy('name')
             ->paginate(20);
 
+        // Bereken abonnementsstatus voor elke client
+        $clientIds = $clients->pluck('id')->toArray();
+        $intakes = Intake::whereIn('client_id', $clientIds)
+            ->whereNotNull('start_date')
+            ->orderByDesc('start_date')
+            ->get()
+            ->keyBy('client_id');
+
+        // Voeg subscription_status toe aan elke client
+        foreach ($clients as $client) {
+            $client->subscription_status = $this->calculateSubscriptionStatus($client, $intakes);
+        }
+
         return view('coach.clients.index', compact('clients', 'q'));
+    }
+
+    /**
+     * Bereken de abonnementsstatus voor een client.
+     * 
+     * @return array{is_active: bool, label: string, days_remaining: int|null}
+     */
+    private function calculateSubscriptionStatus(User $client, $intakes): array
+    {
+        $intake = $intakes->get($client->id);
+        $profile = $client->clientProfile;
+
+        // Geen intake of start_date = onbekend
+        if (!$intake || !$intake->start_date) {
+            return [
+                'is_active' => false,
+                'label' => 'Onbekend',
+                'days_remaining' => null,
+            ];
+        }
+
+        $startDate = Carbon::parse($intake->start_date);
+        $periodWeeks = (int) ($profile->period_weeks ?? 12);
+        $endDate = $startDate->copy()->addWeeks($periodWeeks);
+        
+        $now = Carbon::now();
+        $daysRemaining = (int) floor($now->diffInDays($endDate, false));
+        $isActive = $daysRemaining >= 0;
+
+        return [
+            'is_active' => $isActive,
+            'label' => $isActive ? 'Actief' : 'Verlopen',
+            'days_remaining' => $daysRemaining,
+            'end_date' => $endDate->format('d-m-Y'),
+        ];
     }
 
     /**

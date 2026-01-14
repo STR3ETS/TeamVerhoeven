@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
-<div class="max-w-3xl mx-auto" x-data="intakeWizard({{ json_encode($ak ?? []) }})" x-init="init()">
+<div class="max-w-3xl mx-auto" x-data="intakeWizard({{ json_encode($ak ?? []) }}, {{ json_encode($renewData ?? null) }}, {{ json_encode($isRenew ?? false) }})" x-init="init()">
   @if(request()->has('key'))
     <script>
       (function () {
@@ -35,6 +35,27 @@
         try {
           var url = new URL(window.location.href);
           url.searchParams.delete('key');
+          var qs = url.searchParams.toString();
+          var clean = url.pathname + (qs ? '?' + qs : '') + url.hash;
+          history.replaceState(null, '', clean);
+        } catch (e) {}
+      })();
+    </script>
+  @endif
+  @if($isRenew ?? false)
+    <script>
+      (function () {
+        try {
+          // Bij renew: localStorage opruimen zodat we met schone lei beginnen
+          localStorage.removeItem('intakeWizard_v1');
+          sessionStorage.removeItem('intakePending');
+          sessionStorage.removeItem('intakeConfirmed');
+        } catch (e) {}
+
+        // Renew parameter uit URL strippen na verwerking
+        try {
+          var url = new URL(window.location.href);
+          url.searchParams.delete('renew');
           var qs = url.searchParams.toString();
           var clean = url.pathname + (qs ? '?' + qs : '') + url.hash;
           history.replaceState(null, '', clean);
@@ -59,6 +80,12 @@
     Goed om je te zien en welkom bij 2BeFit Coaching X Team Verhoeven<br class="hidden md:block">
     Laten we even je persoonlijke profiel samenstellen. Op basis hiervan worden de trainingen samengesteld.
   </p>
+  @if($isRenew ?? false)
+    <div class="mb-4 rounded-xl border border-blue-300 bg-blue-50 text-blue-800 p-3 text-sm">
+      <strong><i class="fa-solid fa-arrow-rotate-right mr-1"></i> Abonnement verlengen</strong><br>
+      Je persoonlijke gegevens en coach voorkeur zijn al ingevuld. Kies een nieuw pakket en vul de rest van de intake in om je abonnement te verlengen.
+    </div>
+  @endif
   @if(!empty($ak))
     <div class="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 p-3 text-sm">
       <strong>Key geactiveerd:</strong><br>
@@ -122,6 +149,7 @@
                    :class="errors.dob ? 'border-red-500 focus:border-red-500' : ''">
           </div>
 
+          {{-- Startdatum: altijd tonen op normale plek --}}
           <div>
             <p class="text-sm font-medium text-black mb-1">Wanneer wil je beginnen?</p>
             <input id="start_date" type="date" name="start_date" x-model="form.start_date" required
@@ -294,6 +322,21 @@
         </div>
 
         <div class="relative mb-6">
+          {{-- Bij renew: toon startdatum veld hier ipv stap 0 --}}
+          <template x-if="isRenew">
+            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <p class="text-sm font-medium text-black mb-2">
+                <i class="fa-solid fa-calendar-days mr-1 text-blue-500"></i>
+                Wanneer wil je je nieuwe traject starten?
+              </p>
+              <input id="start_date_renew" type="date" name="start_date" x-model="form.start_date" required
+                     class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
+                            border-gray-300 hover:border-[#c7c7c7]"
+                     :class="errors.start_date ? 'border-red-500 focus:border-red-500' : ''">
+              <p class="text-xs text-gray-500 mt-1">Kies een maandag als startdatum</p>
+            </div>
+          </template>
+
           <div class="swiper packages-swiper px-6">
             <div class="swiper-wrapper">
               @php
@@ -337,7 +380,7 @@
                         ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
                       ]],
                       ['title' => 'Kortingen + Prijzen','items' => [
-                        ['text' => '10% militair / veteraan korting', 'on' => true],
+                        // ['text' => '10% militair / veteraan korting', 'on' => true],
                         ['text' => '15% 2BeFit Supplements korting', 'on' => true],
                         ['text' => '15% PT 2BeFit korting', 'on' => true],
                         ['text' => '25% Duo PT 2BeFit korting', 'on' => true],
@@ -384,7 +427,7 @@
                         ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
                       ]],
                       ['title' => 'Kortingen + Prijzen','items' => [
-                        ['text' => '10% militair / veteraan korting', 'on' => true],
+                        // ['text' => '10% militair / veteraan korting', 'on' => true],
                         ['text' => '15% 2BeFit Supplements korting', 'on' => true],
                         ['text' => '10% PT 2BeFit korting', 'on' => true],
                         ['text' => 'Prijs per 4 weken', 'on' => true],
@@ -430,7 +473,7 @@
                         ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => false],
                       ]],
                       ['title' => 'Kortingen + Prijzen','items' => [
-                        ['text' => '10% militair / veteraan korting', 'on' => true],
+                        // ['text' => '10% militair / veteraan korting', 'on' => true],
                         ['text' => 'Prijs per 4 weken', 'on' => true],
                       ]],
                     ],
@@ -1073,13 +1116,14 @@
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
   // Intake wizard – versie met key-ondersteuning (ak) om stap 2 te skippen/forceren
-  // Gebruik in Blade: x-data="intakeWizard({{ json_encode($ak ?? []) }})"
-  function intakeWizard(ak = null) {
+  // Gebruik in Blade: x-data="intakeWizard({{ json_encode($ak ?? []) }}, {{ json_encode($renewData ?? null) }}, {{ json_encode($isRenew ?? false) }})"
+  function intakeWizard(ak = null, renewData = null, isRenew = false) {
     const STORAGE_KEY = 'intakeWizard_v1';
 
     return {
       // --- flags vanuit server ---
       hasKey: !!(ak && ak.package && ak.duration),
+      isRenew: !!isRenew,
 
       // --- state ---
       isPaying: false,
@@ -1150,7 +1194,26 @@
           this.form.duration = ak.duration;
         }
 
-        this.loadState();
+        // Bij renew: vul persoonlijke gegevens en coach voorkeur in vanuit server data
+        // en start bij stap 2 (pakket keuze)
+        if (this.isRenew && renewData) {
+          // Vul persoonlijke gegevens in (stap 0)
+          this.form.name = renewData.name || '';
+          this.form.email = renewData.email || '';
+          this.form.phone = renewData.phone || '';
+          this.form.dob = renewData.dob || '';
+          this.form.gender = renewData.gender || '';
+          this.form.street = renewData.street || '';
+          this.form.house_number = renewData.house_number || '';
+          this.form.postcode = renewData.postcode || '';
+          // Coach voorkeur (stap 1)
+          this.form.preferred_coach = renewData.preferred_coach || '';
+          // Start bij pakket keuze (stap 2)
+          this.step = 2;
+          this.saveState();
+        } else {
+          this.loadState();
+        }
 
         const params=new URLSearchParams(window.location.search);
         const urlStep=parseInt(params.get('step')||'',10);

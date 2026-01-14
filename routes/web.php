@@ -9,6 +9,7 @@ use App\Http\Controllers\CoachThreadController;
 use App\Http\Controllers\MagicLoginController;
 use App\Http\Controllers\CoachPlanningController;
 use App\Http\Controllers\TrainingLibraryController;
+use App\Http\Controllers\SubscriptionExpiryController;
 use Illuminate\Http\Request;
 use App\Models\AccessKey;
 
@@ -33,6 +34,12 @@ Route::middleware('guest')->group(function () {
  */
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [MagicLoginController::class, 'logout'])->name('logout');
+
+    // Subscription expiry routes (voor clients)
+    Route::get('/subscription/check', [SubscriptionExpiryController::class, 'check'])->name('subscription.check');
+    Route::post('/subscription/dismiss', [SubscriptionExpiryController::class, 'dismiss'])->name('subscription.dismiss');
+    Route::post('/subscription/renew', [SubscriptionExpiryController::class, 'renew'])->name('subscription.renew');
+    Route::post('/subscription/delete', [SubscriptionExpiryController::class, 'delete'])->name('subscription.delete');
 });
 
 /**
@@ -127,7 +134,34 @@ Route::get('/intake', function (Request $request) {
         session()->forget('ak');
     }
 
-    return view('intake.index');
+    // Check voor renew flow - prefill bestaande gebruikersdata
+    $renewData = null;
+    $isRenew = $request->has('renew') && $request->query('renew') == '1';
+    
+    if ($isRenew && auth()->check()) {
+        $user = auth()->user();
+        $profile = \App\Models\ClientProfile::where('user_id', $user->id)->first();
+        
+        if ($profile) {
+            $address = is_array($profile->address) ? $profile->address : [];
+            $renewData = [
+                'name' => $user->name ?? '',
+                'email' => $user->email ?? '',
+                'phone' => $profile->phone_e164 ?? '',
+                'dob' => $profile->birthdate ? $profile->birthdate->format('Y-m-d') : '',
+                'gender' => $profile->gender === 'm' ? 'man' : ($profile->gender === 'f' ? 'vrouw' : ''),
+                'street' => $address['street'] ?? '',
+                'house_number' => $address['house_number'] ?? '',
+                'postcode' => $address['postcode'] ?? '',
+                'preferred_coach' => $profile->coach_preference ?? 'none',
+            ];
+        }
+    }
+
+    return view('intake.index', [
+        'renewData' => $renewData,
+        'isRenew' => $isRenew,
+    ]);
 })->name('intake.index');
 
 Route::post('/intake/checkout', [CheckoutController::class, 'create'])->name('intake.checkout');

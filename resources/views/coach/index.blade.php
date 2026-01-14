@@ -6,20 +6,26 @@
 @php
     use App\Models\User;
     use App\Models\Order;
+    use App\Models\SubscriptionRenewal;
     use Illuminate\Support\Facades\DB;
 
     $coach = auth()->user();
     $today = now()->toDateString();
 
-    // Nieuwe clients van vandaag:
+    // Nieuwe clients van vandaag OF verlengingen vandaag:
     // - users.role = 'client'
-    // - users.created_at = vandaag
+    // - users.created_at = vandaag (nieuwe aanmelding)
+    //   OF subscription_renewals.first_renewed_at = vandaag (verlenging)
     // - EN óf nog geen coach (coach_id = null)
     //   óf al gekoppeld aan deze coach (coach_id = huidige user id)
     $newClients = DB::table('users')
         ->leftJoin('client_profiles', 'client_profiles.user_id', '=', 'users.id')
+        ->leftJoin('subscription_renewals', 'subscription_renewals.user_id', '=', 'users.id')
         ->where('users.role', 'client')
-        ->whereDate('users.created_at', $today)
+        ->where(function ($q) use ($today) {
+            $q->whereDate('users.created_at', $today)  // Nieuwe aanmeldingen vandaag
+              ->orWhereDate('subscription_renewals.first_renewed_at', $today);  // OF verlengingen vandaag
+        })
         ->where(function ($q) use ($coach) {
             $q->whereNull('client_profiles.coach_id')
               ->orWhere('client_profiles.coach_id', $coach->id);
@@ -29,7 +35,8 @@
             'users.name',
             'users.email',
             'users.created_at',
-            'client_profiles.coach_id'
+            'client_profiles.coach_id',
+            'subscription_renewals.first_renewed_at as renewed_at'
         )
         ->orderByDesc('users.created_at')
         ->get();
@@ -70,15 +77,33 @@
 
         <div class="space-y-3">
             @foreach($newClients as $client)
+                @php
+                    // Check of dit een verlenging is (renewed_at is vandaag)
+                    $isRenewal = !empty($client->renewed_at);
+                    $isNewToday = \Carbon\Carbon::parse($client->created_at)->isToday();
+                @endphp
                 <div class="p-4 bg-[#fffaf0] border border-[#c8ab7a]/40 rounded-2xl flex flex-col md:flex-row items-start justify-between gap-3">
                     <div>
-                        <div class="font-semibold text-[#c8ab7a]">
-                            {{ $client->name ?? 'Onbekende klant' }}
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-[#c8ab7a]">
+                                {{ $client->name ?? 'Onbekende klant' }}
+                            </span>
+                            @if($isRenewal)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 border border-green-200">
+                                    <i class="fa-solid fa-rotate-right mr-1 text-[8px]"></i>
+                                    Verlenging
+                                </span>
+                            @endif
                         </div>
 
                         <p class="text-xs text-gray-600">
-                            Aangemeld op
-                            {{ \Carbon\Carbon::parse($client->created_at)->format('d-m-Y H:i') }}
+                            @if($isRenewal && !$isNewToday)
+                                Verlengd op
+                                {{ \Carbon\Carbon::parse($client->renewed_at)->format('d-m-Y H:i') }}
+                            @else
+                                Aangemeld op
+                                {{ \Carbon\Carbon::parse($client->created_at)->format('d-m-Y H:i') }}
+                            @endif
                             @if(!empty($client->email))
                                 · {{ $client->email }}
                             @endif
@@ -170,26 +195,4 @@
         <p class="text-sm text-white">Bekijk alle klanten die aan jou gekoppeld zijn</p>
     </a>
 </div>
-
-<h2 class="text-lg font-bold mb-2">Informatie</h2>
-<section class="grid gap-4 grid-cols-1 md:grid-cols-2 mb-4">
-    <div class="p-5 bg-white rounded-3xl border border-gray-300">
-        <div class="text-sm text-black font-semibold opacity-50 mb-1">Totaal klanten</div>
-        <div class="text-3xl font-bold text-[#c8ab7a] mb-2">
-            {{ number_format($totalClients, 0, ',', '.') }}
-        </div>
-        <div class="text-[12px] text-gray-500">
-            Status t/m {{ $asOf }}
-        </div>
-    </div>
-    <div class="p-5 bg-white rounded-3xl border border-gray-300">
-        <div class="text-sm text-black font-semibold opacity-50 mb-1">Totale omzet</div>
-        <div class="text-3xl font-bold text-[#c8ab7a] mb-2">
-            € {{ number_format($totalRevenue, 2, ',', '.') }}
-        </div>
-        <div class="text-[12px] text-gray-500">
-            Status t/m {{ $asOf }}
-        </div>
-    </div>
-</section>
 @endsection

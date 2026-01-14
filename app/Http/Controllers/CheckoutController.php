@@ -171,13 +171,46 @@ class CheckoutController extends Controller
         ];
 
         // 4) Draft Intake + pending Order
-        [$intake, $order] = DB::transaction(function () use ($payload, $data, $unitAmountCents) {
-            $intake = Intake::create([
-                'client_id'  => null,
-                'status'     => 'active',
-                'payload'    => $payload,
-                'start_date' => $data['start_date'],   // 👈 HIER OPSLAAN
-            ]);
+        // Bij renew (ingelogde user) update bestaande intake, anders maak nieuwe
+        $user = $request->user();
+        $isRenew = $user && $user->role === 'client' && session('subscription_renew', false);
+
+        [$intake, $order] = DB::transaction(function () use ($payload, $data, $unitAmountCents, $user, $isRenew) {
+            if ($isRenew && $user) {
+                // Update bestaande intake bij renew
+                $intake = Intake::where('client_id', $user->id)
+                    ->orderByDesc('id')
+                    ->first();
+                
+                if ($intake) {
+                    $intake->payload = $payload;
+                    $intake->start_date = $data['start_date'];
+                    $intake->status = 'active';
+                    $intake->completed_at = null;
+                    $intake->save();
+                    
+                    Log::info('[checkout.create] updated existing intake for renew', [
+                        'intake_id' => $intake->id,
+                        'user_id' => $user->id,
+                    ]);
+                } else {
+                    // Fallback: maak nieuwe als geen bestaande gevonden
+                    $intake = Intake::create([
+                        'client_id'  => $user->id,
+                        'status'     => 'active',
+                        'payload'    => $payload,
+                        'start_date' => $data['start_date'],
+                    ]);
+                }
+            } else {
+                // Normale flow: nieuwe intake maken
+                $intake = Intake::create([
+                    'client_id'  => $user?->id ?? null,
+                    'status'     => 'active',
+                    'payload'    => $payload,
+                    'start_date' => $data['start_date'],
+                ]);
+            }
 
             $order = Order::create([
                 'client_id'    => null,
@@ -208,7 +241,10 @@ class CheckoutController extends Controller
 
             Log::info('[checkout.create] FAKE enabled (access key or global)');
 
-            DB::transaction(function () use ($intake, $order, $data, $ak, $forceFake) {
+            // Check of dit een renewal is (voor mail later)
+            $wasRenewal = session('subscription_renew', false);
+
+            DB::transaction(function () use ($intake, $order, $data, $ak, $forceFake, $wasRenewal) {
                 // User
                 $user = User::firstOrCreate(
                     ['email' => $data['email']],
@@ -312,8 +348,8 @@ class CheckoutController extends Controller
                 $dur = (int)($intake->payload['duration_weeks'] ?? 12);
                 $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
 
-                // 🔔 NIEUW: mail sturen als het echt een nieuwe user is
-                $this->notifyNewUserIfNeeded($user, $intake, $order); // <-- deze regel toevoegen
+                // 🔔 Mail sturen bij nieuwe user OF bij verlenging
+                $this->notifyNewUserIfNeeded($user, $intake, $order, $wasRenewal);
 
                 // [AK] gebruiks­count ophogen
                 if ($forceFake) {
@@ -355,6 +391,7 @@ class CheckoutController extends Controller
             if ($forceFake) {
                 session()->forget('ak'); // key niet hergebruiken binnen dezelfde sessie
             }
+            session()->forget('subscription_renew'); // Reset renew flag na FAKE checkout
 
             // Door naar intake (stap 3) zonder Stripe
             return response()->json([
@@ -367,10 +404,11 @@ class CheckoutController extends Controller
         $cancelUrl  = route('intake.index', ['step' => 2, 'canceled' => 1]);
 
         $stripe = new StripeClient(config('services.stripe.secret'));
+        $periodWeeks = (int) $data['duration'];
         $productName = match ($data['package']) {
-            'pakket_a' => '2BeFit - Basis Pakket (maandelijks)',
-            'pakket_b' => '2BeFit - Chasing Goals Pakket (maandelijks)',
-            'pakket_c' => '2BeFit - Elite Hyrox Pakket (maandelijks)',
+            'pakket_a' => '2BeFit - Basis Pakket (maandelijks) ' . $periodWeeks . ' weken',
+            'pakket_b' => '2BeFit - Chasing Goals Pakket (maandelijks) ' . $periodWeeks . ' weken',
+            'pakket_c' => '2BeFit - Elite Hyrox Pakket (maandelijks) ' . $periodWeeks . ' weken',
         };
 
         $session = $stripe->checkout->sessions->create([
@@ -474,7 +512,10 @@ class CheckoutController extends Controller
                 return response()->json(['message' => 'Onvolledige betaaldata (intake/email).'], 422);
             }
 
-            [$user, $intake, $order] = DB::transaction(function () use ($intakeId, $orderId, $email) {
+            // Check of dit een renewal was (voor mail later)
+            $wasRenewal = session('subscription_renew', false);
+
+            [$user, $intake, $order] = DB::transaction(function () use ($intakeId, $orderId, $email, $wasRenewal) {
                 $intake = Intake::lockForUpdate()->find($intakeId);
                 if (!$intake) {
                     Log::error('[checkout.confirm.tx] intake not found', ['intake_id' => $intakeId]);
@@ -595,7 +636,7 @@ class CheckoutController extends Controller
                 $pkg = (string)($intake->payload['package'] ?? 'pakket_a');
                 $dur = (int)($intake->payload['duration_weeks'] ?? 12);
                 $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
-                $this->notifyNewUserIfNeeded($user, $intake, $order);
+                $this->notifyNewUserIfNeeded($user, $intake, $order, $wasRenewal);
 
                 return [$user, $intake, $order];
             });
@@ -606,6 +647,9 @@ class CheckoutController extends Controller
                 'order_id'     => $order?->id,
                 'order_status' => $order?->status,
             ]);
+
+            // Reset subscription renew flag na succesvolle betaling
+            session()->forget('subscription_renew');
 
             // Mailchimp sync NA commit (échte betaling)
             try {
@@ -1106,13 +1150,16 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Stuur mails bij nieuwe user (alleen als hij net is aangemaakt).
-     * - Interne notificatie (naar Boyd)
+     * Stuur mails bij nieuwe user OF bij verlenging.
      * - Welkomstmail naar de klant (pakket-afhankelijk)
+     * - Notificatie naar coach(es)
+     * 
+     * @param bool $isRenewal Als true, verstuur altijd (ook bij bestaande user)
      */
-    private function notifyNewUserIfNeeded(User $user, Intake $intake, ?Order $order = null): void
+    private function notifyNewUserIfNeeded(User $user, Intake $intake, ?Order $order = null, bool $isRenewal = false): void
     {
-        if (! $user->wasRecentlyCreated) {
+        // Bij verlenging altijd versturen, anders alleen bij nieuwe user
+        if (!$isRenewal && !$user->wasRecentlyCreated) {
             return;
         }
 
@@ -1125,6 +1172,12 @@ class CheckoutController extends Controller
             if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
                 Mail::to($user->email)
                     ->send(new ClientWelcomeMail($user, $intake, $order));
+                
+                Log::info('[notifyNewUserIfNeeded] welcome mail sent', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'is_renewal' => $isRenewal,
+                ]);
             }
 
             // Coach-specifieke mails op basis van preferred_coach
@@ -1152,8 +1205,14 @@ class CheckoutController extends Controller
                 Mail::to($coachEmail)->send(new NewIntakeNotification($user, $intake, $order));
             }
 
+            Log::info('[notifyNewUserIfNeeded] coach notification sent', [
+                'user_id' => $user->id,
+                'coaches' => $coachEmails,
+                'is_renewal' => $isRenewal,
+            ]);
+
         } catch (\Throwable $e) {
-            \Log::error('[notifyNewUserIfNeeded] mail failed', [
+            Log::error('[notifyNewUserIfNeeded] mail failed', [
                 'user_id' => $user->id,
                 'email'   => $user->email,
                 'error'   => $e->getMessage(),

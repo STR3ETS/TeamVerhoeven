@@ -118,6 +118,10 @@ class MagicLoginController extends Controller
         Auth::login($user, true);
         $request->session()->regenerate();
 
+        // Reset subscription popup en renew status bij nieuwe login
+        $request->session()->forget('subscription_popup_shown');
+        $request->session()->forget('subscription_renew');
+
         $user = Auth::user(); // vers ophalen
 
         // ➜ Intake alleen voor CLIENTS
