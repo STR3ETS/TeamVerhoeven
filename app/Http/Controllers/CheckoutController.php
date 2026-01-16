@@ -1171,7 +1171,7 @@ class CheckoutController extends Controller
             // 2) Welkomstmail naar de klant zelf
             if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
                 Mail::to($user->email)
-                    ->send(new ClientWelcomeMail($user, $intake, $order));
+                    ->send(new ClientWelcomeMail($user, $intake, $order, $isRenewal));
                 
                 Log::info('[notifyNewUserIfNeeded] welcome mail sent', [
                     'user_id' => $user->id,

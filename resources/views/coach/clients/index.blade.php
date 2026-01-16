@@ -72,7 +72,13 @@
 
             {{-- Status Label --}}
             <td class="px-3 py-2 text-left">
-              @if($status['is_active'])
+              @if($status['is_pending'] ?? false)
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100/80 text-orange-700 backdrop-blur-sm border border-orange-200/50"
+                      title="Intake nog niet afgerond">
+                  <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  Bezig
+                </span>
+              @elseif($status['is_active'])
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100/80 text-green-700 backdrop-blur-sm border border-green-200/50"
                       title="Verloopt op {{ $status['end_date'] ?? 'onbekend' }}">
                   <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
@@ -91,8 +97,10 @@
             <td class="px-3 py-2 text-left">
               @if($status['end_date'])
                 <span class="text-gray-700 font-medium">{{ $status['end_date'] }}</span>
+              @elseif($status['is_pending'] ?? false)
+                <span class="text-orange-600 text-xs font-medium">Intake bezig</span>
               @else
-                <span class="text-gray-400 text-xs">Onbekend</span>
+                <span class="text-gray-400 text-xs">Bezig met de intake</span>
               @endif
             </td>
           </tr>
