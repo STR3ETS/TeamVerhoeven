@@ -209,8 +209,9 @@
   · {{ $currentStart->format('d-m') }} t/m {{ $currentEnd->format('d-m-Y') }}
 </p>
 <div id="planning-root" data-current-week="{{ $week }}">
-  {{-- Week-selector (linkt naar dezelfde pagina met ?week=) --}}
-  <div class="flex flex-wrap gap-2 mb-3">
+  {{-- Week-selector - scrollbaar bij veel weken --}}
+  <div class="mb-3 max-h-32 overflow-y-auto">
+    <div class="flex flex-wrap gap-2">
     @for($w=1; $w <= $totalWeeks; $w++)
       <a href="{{ request()->fullUrlWithQuery(['week' => $w]) }}"
          class="px-3 py-1 rounded-full text-xs border
@@ -220,6 +221,7 @@
         Week {{ $w }}
       </a>
     @endfor
+    </div>
   </div>
 
   @if($assignments->isEmpty())
@@ -235,51 +237,54 @@
         Schema voor week {{ $week }}
       </div>
 
-      @foreach($daysMap as $key => $label)
-        <div class="mb-4">
-          <h3 class="text-sm font-semibold mb-2 opacity-50">{{ $label }}</h3>
-          <div class="flex flex-col gap-2">
-            @forelse($sortedForDay($key) as $a)
-              @php $trainingCard = $a->card; @endphp
+      {{-- Scrollbare container voor de dagplanning --}}
+      <div class="max-h-[60vh] overflow-y-auto">
+        @foreach($daysMap as $key => $label)
+          <div class="mb-4">
+            <h3 class="text-sm font-semibold mb-2 opacity-50">{{ $label }}</h3>
+            <div class="flex flex-col gap-2">
+              @forelse($sortedForDay($key) as $a)
+                @php $trainingCard = $a->card; @endphp
 
-              @if($trainingCard)
-                <div class="p-5 bg-white rounded-3xl border border-gray-300">
-                  <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
-                    {{ $trainingCard->title }}
-                  </h4>
+                @if($trainingCard)
+                  <div class="p-5 bg-white rounded-3xl border border-gray-300">
+                    <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                      {{ $trainingCard->title }}
+                    </h4>
 
-                  @foreach($trainingCard->blocks as $block)
-                    <div class="{{ !$loop->first ? 'mt-4' : '' }}">
-                      <span class="text-[10px] {{ $block->badge_classes }} font-semibold px-2 py-1 rounded">
-                        {{ $block->label }}
-                      </span>
-                      <ul class="text-xs text-black font-medium mt-2 flex flex-col gap-2">
-                        @foreach($block->items as $item)
-                          <li class="flex items-center justify-between">
-                            <span class="max-w-[50%]">{!! $item->left_html !!}</span>
-                            @if(!empty($item->right_text))
-                              <span class="text-gray-500 font-semibold">{{ $item->right_text }}</span>
-                            @endif
-                          </li>
-                        @endforeach
-                      </ul>
-                    </div>
-                  @endforeach
+                    @foreach($trainingCard->blocks as $block)
+                      <div class="{{ !$loop->first ? 'mt-4' : '' }}">
+                        <span class="text-[10px] {{ $block->badge_classes }} font-semibold px-2 py-1 rounded">
+                          {{ $block->label }}
+                        </span>
+                        <ul class="text-xs text-black font-medium mt-2 flex flex-col gap-2">
+                          @foreach($block->items as $item)
+                            <li class="flex items-center justify-between">
+                              <span class="max-w-[50%]">{!! $item->left_html !!}</span>
+                              @if(!empty($item->right_text))
+                                <span class="text-gray-500 font-semibold">{{ $item->right_text }}</span>
+                              @endif
+                            </li>
+                          @endforeach
+                        </ul>
+                      </div>
+                    @endforeach
+                  </div>
+                @else
+                  <div class="p-5 bg-white rounded-3xl border border-gray-300">
+                    <div class="text-sm font-semibold mb-1">Training #{{ $a->training_card_id }}</div>
+                    <div class="text-xs text-gray-500">Kaart niet gevonden</div>
+                  </div>
+                @endif
+              @empty
+                <div class="p-5 bg-gray-100 rounded-3xl border border-gray-200 text-xs text-gray-500 italic">
+                  Geen training
                 </div>
-              @else
-                <div class="p-5 bg-white rounded-3xl border border-gray-300">
-                  <div class="text-sm font-semibold mb-1">Training #{{ $a->training_card_id }}</div>
-                  <div class="text-xs text-gray-500">Kaart niet gevonden</div>
-                </div>
-              @endif
-            @empty
-              <div class="p-5 bg-gray-100 rounded-3xl border border-gray-200 text-xs text-gray-500 italic">
-                Geen training
-              </div>
-            @endforelse
+              @endforelse
+            </div>
           </div>
-        </div>
-      @endforeach
+        @endforeach
+      </div>
     </div>
   @endif
 </div>

@@ -20,8 +20,9 @@
   Je bent een trainingsplan aan het maken voor {{ $client->name }}.
 </p>
 
-{{-- Week selector --}}
-<div class="flex flex-wrap gap-2 mb-4">
+{{-- Week selector - scrollbaar bij veel weken --}}
+<div class="mb-4 max-h-32 overflow-y-auto">
+  <div class="flex flex-wrap gap-2">
   @for($w=1; $w <= ($totalWeeks ?? 1); $w++)
     @php
       // start/eind van deze trainingsweek
@@ -39,6 +40,7 @@
       · {{ $weekStart->format('d-m') }} t/m {{ $weekEnd->format('d-m-Y') }}
     </a>
   @endfor
+  </div>
 </div>
 
 <div class="w-full grid grid-cols-2 gap-6">

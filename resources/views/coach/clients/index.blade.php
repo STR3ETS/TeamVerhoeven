@@ -85,11 +85,37 @@
                   Actief
                 </span>
               @else
+
+              {{-- Dit moet nog verbeterd worden --}}
+              @if($status['end_date'])
+
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100/80 text-red-700 backdrop-blur-sm border border-red-200/50"
-                      title="Verlopen op {{ $status['end_date'] ?? 'onbekend' }}">
+                  title="Verlopen op {{ $status['end_date'] ?? 'onbekend' }}">
                   <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                   Verlopen
                 </span>
+
+              @elseif($status['is_pending'] ?? false)
+
+                <span class="text-orange-600 text-xs font-medium">Intake bezig</span>
+
+              @else
+
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100/80 text-orange-700 backdrop-blur-sm border border-orange-200/50"
+                      title="Intake nog niet afgerond">
+                  <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  Bezig
+                </span> 
+
+              @endif
+
+
+                {{-- <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100/80 text-red-700 backdrop-blur-sm border border-red-200/50"
+                      title="Verlopen op {{ $status['end_date'] ?? 'onbekend' }}">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                  Verlopen
+                </span> --}}
+                
               @endif
             </td>
   
