@@ -138,7 +138,11 @@ Route::get('/intake', function (Request $request) {
     $renewData = null;
     $isRenew = $request->has('renew') && $request->query('renew') == '1';
     
+    // Als renew=1, zet de session flag zodat de expiry popup niet verschijnt
+    // Dit voorkomt dat de popup de gebruiker blokkeert tijdens het renewal proces
     if ($isRenew && auth()->check()) {
+        session(['subscription_renew' => true]);
+        
         $user = auth()->user();
         $profile = \App\Models\ClientProfile::where('user_id', $user->id)->first();
         

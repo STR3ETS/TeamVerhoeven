@@ -29,6 +29,7 @@ class SubscriptionExpiryController extends Controller
      * - Popup met verlengen/verwijderen knoppen
      * - Kan NIET worden weggeklikt
      * - Wordt ALTIJD getoond (geen session check)
+     * - UITZONDERING: Niet tonen als gebruiker al bezig is met verlengen (subscription_renew session)
      */
     public function check(Request $request)
     {
@@ -36,6 +37,12 @@ class SubscriptionExpiryController extends Controller
 
         // Alleen clients hebben abonnementen
         if (!$user || $user->role !== 'client') {
+            return response()->json(['show_popup' => false]);
+        }
+
+        // BELANGRIJK: Als de gebruiker al bezig is met verlengen, toon de popup NIET
+        // Dit voorkomt dat de popup verschijnt op de intake pagina tijdens het renewal proces
+        if (session('subscription_renew', false)) {
             return response()->json(['show_popup' => false]);
         }
 

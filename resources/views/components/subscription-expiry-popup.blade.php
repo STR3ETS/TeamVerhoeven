@@ -1,8 +1,9 @@
 {{-- Subscription Expiry Popup Component --}}
 {{-- WAARSCHUWING POPUP: 7 dagen van tevoren, alleen informatief met "Begrepen" knop --}}
 {{-- VERLOPEN POPUP: Niet wegklikbaar, met verlengen/verwijderen knoppen --}}
+{{-- NIET TONEN: Als gebruiker al bezig is met verlengen (op intake pagina met renew=1) --}}
 @auth
-@if(auth()->user()->role === 'client')
+@if(auth()->user()->role === 'client' && !session('subscription_renew', false))
 <div x-data="subscriptionExpiryPopup()" x-init="checkExpiry()" x-cloak>
     {{-- Overlay --}}
     <div x-show="showPopup" 
