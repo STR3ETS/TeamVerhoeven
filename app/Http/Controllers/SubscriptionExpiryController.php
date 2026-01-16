@@ -100,8 +100,13 @@ class SubscriptionExpiryController extends Controller
 
     /**
      * Verlengen: reset intake data (behalve persoonlijke gegevens en trainer keuze),
-     * annuleer oude Stripe subscription, reset training assignments,
+     * annuleer oude Stripe subscription, behoud training assignments en startdatum,
      * en redirect naar intake formulier.
+     * 
+     * Bij renewal:
+     * - period_weeks wordt OPGETELD bij bestaande period_weeks (niet vervangen)
+     * - start_date blijft behouden (niet gereset)
+     * - training_assignments blijven behouden (niet verwijderd)
      */
     public function renew(Request $request)
     {
@@ -121,17 +126,18 @@ class SubscriptionExpiryController extends Controller
                 // 1. Annuleer Stripe subscription (aan einde van huidige periode)
                 $this->cancelStripeSubscription($user->id, false);
 
-                // 2. Reset training assignments voor deze user
-                TrainingAssignment::where('user_id', $user->id)->delete();
-                Log::info('[subscription.renew] training assignments deleted', ['user_id' => $user->id]);
+                // 2. Training assignments worden NIET gereset bij renewal
+                // De coach behoudt het bestaande trainingschema
+                Log::info('[subscription.renew] training assignments preserved', ['user_id' => $user->id]);
 
-                // 3. Behoud: user_id, coach_id, birthdate, gender, address, phone_e164, coach_preference
+                // 3. Behoud: user_id, coach_id, birthdate, gender, address, phone_e164, coach_preference, period_weeks
                 // Reset alle andere intake-gerelateerde velden
+                // BELANGRIJK: period_weeks wordt NIET gereset - dit wordt later opgeteld in CheckoutController
                 $profile->height_cm = null;
                 $profile->weight_kg = null;
                 $profile->goals = null;
                 $profile->injuries = null;
-                $profile->period_weeks = 12; // Reset naar default
+                // period_weeks wordt NIET gereset - wordt opgeteld bij renewal in CheckoutController
                 $profile->frequency = null;
                 $profile->background = null;
                 $profile->facilities = null;
@@ -146,7 +152,7 @@ class SubscriptionExpiryController extends Controller
                 $profile->ftp = null;
                 $profile->save();
 
-                Log::info('[subscription.renew] profile reset', ['user_id' => $user->id]);
+                Log::info('[subscription.renew] profile reset (period_weeks preserved)', ['user_id' => $user->id, 'period_weeks' => $profile->period_weeks]);
 
                 // 4. Update bestaande Intake row (niet nieuwe maken)
                 // We resetten alleen de velden die opnieuw ingevuld moeten worden
@@ -182,12 +188,13 @@ class SubscriptionExpiryController extends Controller
                     ];
 
                     $intake->payload = $newPayload;
-                    $intake->start_date = null; // Wordt opnieuw gekozen
+                    // BELANGRIJK: start_date wordt NIET gereset bij renewal
+                    // De originele startdatum blijft behouden voor de weken-optelling berekening
                     $intake->status = 'active';
                     $intake->completed_at = null;
                     $intake->save();
 
-                    Log::info('[subscription.renew] intake reset', ['intake_id' => $intake->id]);
+                    Log::info('[subscription.renew] intake reset (start_date preserved)', ['intake_id' => $intake->id, 'start_date' => $intake->start_date]);
                 }
 
                 // 5. Registreer deze verlenging in subscription_renewals tabel

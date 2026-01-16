@@ -35,7 +35,14 @@ class CheckoutController extends Controller
             'payments_fake' => (bool) config('app.payments_fake', env('PAYMENTS_FAKE', false)),
         ]);
 
+        // Check of dit een renewal is - dan is start_date niet verplicht
+        $user = $request->user();
+        $isRenew = $user && $user->role === 'client' && session('subscription_renew', false);
+
         // 1) Validatie (stap 0 + 1 + 2)
+        // Bij renewal is start_date optioneel (bestaande start_date blijft behouden)
+        $startDateRule = $isRenew ? 'nullable|date' : 'required|date|after_or_equal:today';
+        
         $data = $request->validate([
             // stap 0
             'name'         => 'required|string|max:120',
@@ -47,7 +54,7 @@ class CheckoutController extends Controller
             'street'       => 'required|string|max:120',
             'house_number' => 'required|string|max:20',
             'postcode'     => 'required|string|max:20',
-            'start_date'   => 'required|date|after_or_equal:today',
+            'start_date'   => $startDateRule,
             // stap 1
             'preferred_coach' => 'required|in:roy,eline,nicky,none',
             // stap 2
@@ -172,8 +179,7 @@ class CheckoutController extends Controller
 
         // 4) Draft Intake + pending Order
         // Bij renew (ingelogde user) update bestaande intake, anders maak nieuwe
-        $user = $request->user();
-        $isRenew = $user && $user->role === 'client' && session('subscription_renew', false);
+        // $user en $isRenew zijn al bepaald boven bij de validatie
 
         [$intake, $order] = DB::transaction(function () use ($payload, $data, $unitAmountCents, $user, $isRenew) {
             if ($isRenew && $user) {
@@ -184,14 +190,18 @@ class CheckoutController extends Controller
                 
                 if ($intake) {
                     $intake->payload = $payload;
-                    $intake->start_date = $data['start_date'];
+                    // BELANGRIJK: Bij renewal blijft de originele start_date behouden
+                    // De weken worden opgeteld bij period_weeks in het profiel
+                    // Hierdoor blijft de einddatum correct berekend
+                    // start_date wordt NIET overschreven
                     $intake->status = 'active';
                     $intake->completed_at = null;
                     $intake->save();
                     
-                    Log::info('[checkout.create] updated existing intake for renew', [
+                    Log::info('[checkout.create] updated existing intake for renew (start_date preserved)', [
                         'intake_id' => $intake->id,
                         'user_id' => $user->id,
+                        'preserved_start_date' => $intake->start_date,
                     ]);
                 } else {
                     // Fallback: maak nieuwe als geen bestaande gevonden
@@ -281,7 +291,20 @@ class CheckoutController extends Controller
                 }
                 $profile->gender           = $this->normalizeGender($contact['gender'] ?? null) ?? $profile->gender;
                 $profile->coach_preference = $contact['preferred_coach'] ?? $profile->coach_preference ?? 'none';
-                $profile->period_weeks     = (int)($intake->payload['duration_weeks'] ?? $profile->period_weeks ?? 12);
+                
+                // Bij renewal: weken optellen bij bestaande period_weeks
+                // Bij nieuwe intake: gewoon de gekozen weken gebruiken
+                $newWeeks = (int)($intake->payload['duration_weeks'] ?? 12);
+                if ($wasRenewal && $profile->exists && $profile->period_weeks > 0) {
+                    $profile->period_weeks = $profile->period_weeks + $newWeeks;
+                    Log::info('[checkout.create] FAKE renewal: weeks added', [
+                        'user_id' => $user->id,
+                        'new_weeks' => $newWeeks,
+                        'total_weeks' => $profile->period_weeks,
+                    ]);
+                } else {
+                    $profile->period_weeks = $newWeeks;
+                }
 
                 $existingAddress = is_array($profile->address) ? $profile->address : [];
                 $profile->address = array_merge($existingAddress, array_filter([
@@ -563,7 +586,20 @@ class CheckoutController extends Controller
                 }
                 $profile->gender           = $this->normalizeGender($contact['gender'] ?? null) ?? $profile->gender;
                 $profile->coach_preference = $contact['preferred_coach'] ?? $profile->coach_preference ?? 'none';
-                $profile->period_weeks     = (int)($intake->payload['duration_weeks'] ?? $profile->period_weeks ?? 12);
+                
+                // Bij renewal: weken optellen bij bestaande period_weeks
+                // Bij nieuwe intake: gewoon de gekozen weken gebruiken
+                $newWeeks = (int)($intake->payload['duration_weeks'] ?? 12);
+                if ($wasRenewal && $profile->exists && $profile->period_weeks > 0) {
+                    $profile->period_weeks = $profile->period_weeks + $newWeeks;
+                    Log::info('[checkout.confirm] renewal: weeks added', [
+                        'user_id' => $user->id,
+                        'new_weeks' => $newWeeks,
+                        'total_weeks' => $profile->period_weeks,
+                    ]);
+                } else {
+                    $profile->period_weeks = $newWeeks;
+                }
 
                 // Adres
                 $existingAddress = is_array($profile->address) ? $profile->address : [];

@@ -322,18 +322,13 @@
         </div>
 
         <div class="relative mb-6">
-          {{-- Bij renew: toon startdatum veld hier ipv stap 0 --}}
+          {{-- Bij renew: startdatum blijft behouden, toon informatief bericht --}}
           <template x-if="isRenew">
-            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <p class="text-sm font-medium text-black mb-2">
-                <i class="fa-solid fa-calendar-days mr-1 text-blue-500"></i>
-                Wanneer wil je je nieuwe traject starten?
+            <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <p class="text-sm font-medium text-black">
+                <i class="fa-solid fa-check-circle mr-1 text-green-500"></i>
+                Je huidige startdatum en trainingschema blijven behouden. De nieuwe weken worden toegevoegd aan je bestaande pakket.
               </p>
-              <input id="start_date_renew" type="date" name="start_date" x-model="form.start_date" required
-                     class="w-full rounded-xl border transition duration-300 p-3 focus:outline-none focus:ring-0 text-[16px] md:text-sm
-                            border-gray-300 hover:border-[#c7c7c7]"
-                     :class="errors.start_date ? 'border-red-500 focus:border-red-500' : ''">
-              <p class="text-xs text-gray-500 mt-1">Kies een maandag als startdatum</p>
             </div>
           </template>
 
@@ -1402,25 +1397,28 @@
             firstInvalidEl=firstInvalidEl||document.getElementById('dob');
           }
 
-          // ✅ NIEUW: startdatum verplicht, niet in verleden, en op maandag
-          const startDateStr = this.form.start_date;
-          if (!startDateStr) {
-            this.errors.start_date = 'Kies je startdatum.';
-            firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
-          } else {
-            const sd = new Date(startDateStr + 'T00:00:00');
-            const today = new Date();
-            today.setHours(0,0,0,0);
-
-            if (sd < today) {
-              this.errors.start_date = 'Startdatum mag niet in het verleden liggen.';
+          // ✅ Startdatum validatie - alleen bij nieuwe intake, NIET bij renewal
+          // Bij renewal blijft de originele startdatum behouden
+          if (!this.isRenew) {
+            const startDateStr = this.form.start_date;
+            if (!startDateStr) {
+              this.errors.start_date = 'Kies je startdatum.';
               firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
-            }
+            } else {
+              const sd = new Date(startDateStr + 'T00:00:00');
+              const today = new Date();
+              today.setHours(0,0,0,0);
 
-            const day = sd.getDay(); // 0=zo, 1=ma, ...
-            if (day !== 1) {
-              this.errors.start_date = 'Startdatum moet op een maandag vallen.';
-              firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
+              if (sd < today) {
+                this.errors.start_date = 'Startdatum mag niet in het verleden liggen.';
+                firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
+              }
+
+              const day = sd.getDay(); // 0=zo, 1=ma, ...
+              if (day !== 1) {
+                this.errors.start_date = 'Startdatum moet op een maandag vallen.';
+                firstInvalidEl = firstInvalidEl || document.getElementById('start_date');
+              }
             }
           }
 

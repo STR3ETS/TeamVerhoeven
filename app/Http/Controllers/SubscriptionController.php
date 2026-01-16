@@ -56,7 +56,7 @@ class SubscriptionController extends Controller
 
     /**
      * Process the renewal after intake completion.
-     * This resets the training plan and updates subscription dates.
+     * This updates subscription dates but preserves the training plan.
      */
     public function processRenewal(Request $request)
     {
@@ -67,12 +67,10 @@ class SubscriptionController extends Controller
         }
 
         DB::transaction(function () use ($user) {
-            // 1. Delete all training assignments for this user
-            // Note: training_assignments uses 'user_id', not 'client_id'
-            TrainingAssignment::where('user_id', $user->id)->delete();
-
-            // 2. The intake process will handle creating new intake with new start_date
-            // and updating the profile with new data
+            // Training assignments worden NIET verwijderd bij renewal
+            // De coach behoudt het bestaande trainingschema
+            // De intake process zal de profile updaten met nieuwe data
+            // en period_weeks worden opgeteld (niet vervangen)
         });
 
         // Clear all renewal-related session flags
