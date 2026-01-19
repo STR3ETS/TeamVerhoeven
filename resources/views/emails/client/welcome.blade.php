@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Welkom bij 2BEFIT</title>
+    <title>{{ ($isRenewal ?? false) ? 'Abonnement verlengd - 2BEFIT' : 'Welkom bij 2BEFIT' }}</title>
 </head>
 <body style="margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;background-color:#f4f4f4;">
 <div style="margin:0 auto;background:#d8c1ac;width:700px;">
@@ -18,6 +18,26 @@
 
     {{-- WELKOM / INTRO --}}
     <div style="padding:12px 24px;line-height:1.7;">
+        @if($isRenewal ?? false)
+        <h3 style="margin-top:0;margin-bottom:10px;">
+            Bedankt voor je verlenging, {{ $firstName ?: $user->name }}! 🎉
+        </h3>
+
+        <p style="padding-bottom:15px;margin:0;">
+            Super dat je doorgaat met jouw traject bij 2BEFIT X TEAM VERHOEVEN!
+            <br>Je abonnement is succesvol verlengd en je kunt gewoon blijven trainen.
+        </p>
+
+        <p style="padding-bottom:15px;margin:0;">
+            Je coach heeft je nieuwe gegevens ontvangen en zal jouw trainingsschema updaten.
+            <br>Blijf vooral in contact via de chat in je online omgeving.
+        </p>
+
+        <p style="margin:0;">
+            Met sportieve groet,<br>
+            <strong>Team 2BEFIT X TEAM VERHOEVEN</strong>
+        </p>
+        @else
         <h3 style="margin-top:0;margin-bottom:10px;">
             Welkom {{ $firstName ?: $user->name }} bij 2BEFIT X TEAM VERHOEVEN
         </h3>
@@ -42,6 +62,7 @@
             Met sportieve groet,<br>
             <strong>Team 2BEFIT X TEAM VERHOEVEN</strong>
         </p>
+        @endif
     </div>
 
     {{-- SUPPLEMENTS / KORTING BLOK OP BASIS VAN PAKKET (NU DIRECT NA DE INTRO) --}}

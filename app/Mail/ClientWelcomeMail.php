@@ -17,12 +17,14 @@ class ClientWelcomeMail extends Mailable
     public User $user;
     public Intake $intake;
     public ?Order $order;
+    public bool $isRenewal;
 
-    public function __construct(User $user, Intake $intake, ?Order $order = null)
+    public function __construct(User $user, Intake $intake, ?Order $order = null, bool $isRenewal = false)
     {
-        $this->user   = $user;
-        $this->intake = $intake;
-        $this->order  = $order;
+        $this->user      = $user;
+        $this->intake    = $intake;
+        $this->order     = $order;
+        $this->isRenewal = $isRenewal;
     }
 
     public function build()
@@ -30,12 +32,22 @@ class ClientWelcomeMail extends Mailable
         $package  = (string)($this->intake->payload['package']        ?? 'pakket_a');
         $duration = (int)   ($this->intake->payload['duration_weeks'] ?? 12);
 
-        $subject = match ($package) {
-            'pakket_a' => 'Welkom bij 2BEFIT - Basis Pakket',
-            'pakket_b' => 'Welkom bij 2BEFIT - Chasing Goals Pakket',
-            'pakket_c' => 'Welkom bij 2BEFIT - Elite Hyrox Pakket',
-            default    => 'Welkom bij 2BEFIT',
-        };
+        // Bepaal subject op basis van renewal status
+        if ($this->isRenewal) {
+            $subject = match ($package) {
+                'pakket_a' => 'Jouw abonnement is verlengd! - Basis Pakket',
+                'pakket_b' => 'Jouw abonnement is verlengd! - Chasing Goals Pakket',
+                'pakket_c' => 'Jouw abonnement is verlengd! - Elite Hyrox Pakket',
+                default    => 'Jouw abonnement is verlengd!',
+            };
+        } else {
+            $subject = match ($package) {
+                'pakket_a' => 'Welkom bij 2BEFIT - Basis Pakket',
+                'pakket_b' => 'Welkom bij 2BEFIT - Chasing Goals Pakket',
+                'pakket_c' => 'Welkom bij 2BEFIT - Elite Hyrox Pakket',
+                default    => 'Welkom bij 2BEFIT',
+            };
+        }
 
         // 🔒 Hardcoded portal + acties
         $portalUrl = 'https://app.2befitlifestyle.nl';
@@ -67,6 +79,7 @@ class ClientWelcomeMail extends Mailable
                 'shopLink'      => $shopLink,
                 'guidelineLink' => $guidelineLink,
                 'shirtFormLink' => $shirtFormLink,
+                'isRenewal'     => $this->isRenewal,
                 // 'coachChatLink' => 👈 volledig weggehaald
             ]);
     }

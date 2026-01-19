@@ -36,9 +36,9 @@ class CoachClientController extends Controller
             ->paginate(20);
 
         // Bereken abonnementsstatus voor elke client
+        // Haal ALLE intakes op (ook zonder start_date) om "Bezig" status te bepalen
         $clientIds = $clients->pluck('id')->toArray();
         $intakes = Intake::whereIn('client_id', $clientIds)
-            ->whereNotNull('start_date')
             ->orderByDesc('start_date')
             ->get()
             ->keyBy('client_id');
@@ -54,36 +54,60 @@ class CoachClientController extends Controller
     /**
      * Bereken de abonnementsstatus voor een client.
      * 
-     * @return array{is_active: bool, label: string, days_remaining: int|null, end_date: string|null}
+     * Logica:
+     * - Als intake met start_date bestaat: end_date = start_date + period_weeks → Actief/Verlopen
+     * - Als geen intake/start_date maar WEL recente verlenging (3 dagen): "Bezig" (oranje)
+     * - Anders: "Onbekend"
+     * 
+     * @return array{is_active: bool, label: string, days_remaining: int|null, end_date: string|null, is_pending: bool}
      */
     private function calculateSubscriptionStatus(User $client, $intakes): array
     {
         $intake = $intakes->get($client->id);
         $profile = $client->clientProfile;
 
-        // Geen intake of start_date = onbekend
-        if (!$intake || !$intake->start_date) {
+        // Als intake bestaat EN start_date heeft → bereken status normaal
+        if ($intake && $intake->start_date) {
+            $startDate = Carbon::parse($intake->start_date);
+            $periodWeeks = (int) ($profile->period_weeks ?? 12);
+            $endDate = $startDate->copy()->addWeeks($periodWeeks);
+            
+            $now = Carbon::now();
+            $daysRemaining = (int) floor($now->diffInDays($endDate, false));
+            $isActive = $daysRemaining >= 0;
+
+            return [
+                'is_active' => $isActive,
+                'is_pending' => false,
+                'label' => $isActive ? 'Actief' : 'Verlopen',
+                'days_remaining' => $daysRemaining,
+                'end_date' => $endDate->format('d-m-Y'),
+            ];
+        }
+
+        // Geen intake of geen start_date - check of er een recente verlenging is
+        // Als ja → "Bezig" (client is bezig met intake na verlenging)
+        $hasRecentRenewal = \App\Models\SubscriptionRenewal::where('user_id', $client->id)
+            ->where('first_renewed_at', '>=', now()->subDays(3))
+            ->exists();
+
+        if ($hasRecentRenewal) {
             return [
                 'is_active' => false,
-                'label' => 'Onbekend',
+                'is_pending' => true,
+                'label' => 'Bezig',
                 'days_remaining' => null,
                 'end_date' => null,
             ];
         }
 
-        $startDate = Carbon::parse($intake->start_date);
-        $periodWeeks = (int) ($profile->period_weeks ?? 12);
-        $endDate = $startDate->copy()->addWeeks($periodWeeks);
-        
-        $now = Carbon::now();
-        $daysRemaining = (int) floor($now->diffInDays($endDate, false));
-        $isActive = $daysRemaining >= 0;
-
+        // Geen intake, geen start_date, geen recente verlenging → Onbekend
         return [
-            'is_active' => $isActive,
-            'label' => $isActive ? 'Actief' : 'Verlopen',
-            'days_remaining' => $daysRemaining,
-            'end_date' => $endDate->format('d-m-Y'),
+            'is_active' => false,
+            'is_pending' => false,
+            'label' => 'Onbekend',
+            'days_remaining' => null,
+            'end_date' => null,
         ];
     }
 

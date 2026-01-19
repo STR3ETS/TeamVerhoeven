@@ -39,13 +39,11 @@ class SubscriptionStatusService
             return null;
         }
 
-        // Get period_weeks from intake payload or client profile
-        $periodWeeks = $intake->payload['duration_weeks'] ?? null;
-        
-        if (!$periodWeeks) {
-            $profile = $user->clientProfile;
-            $periodWeeks = $profile?->period_weeks ?? 12;
-        }
+        // BELANGRIJK: Bij renewals worden weken opgeteld bij het profiel
+        // Daarom halen we period_weeks ALTIJD uit het profiel (dat is de totale periode)
+        // De intake payload bevat alleen de laatst gekozen periode, niet het totaal
+        $profile = $user->clientProfile;
+        $periodWeeks = $profile?->period_weeks ?? 12;
 
         $startDate = Carbon::parse($intake->start_date)->startOfDay();
         $endsAt = $startDate->copy()->addWeeks($periodWeeks)->endOfDay(); // End of the last day
