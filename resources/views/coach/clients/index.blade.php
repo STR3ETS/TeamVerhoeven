@@ -42,11 +42,11 @@
   
       <tbody class="divide-y divide-gray-100">
         @forelse ($clients as $c)
-          @php 
-            $p = $c->clientProfile; 
+          @php
+            $p = $c->clientProfile;
             $status = $c->subscription_status ?? ['is_active' => false, 'label' => 'Onbekend', 'end_date' => null];
           @endphp
-          <tr class="cursor-pointer hover:bg-gray-50 transition duration-150 group" 
+          <tr class="cursor-pointer hover:bg-gray-50 transition duration-150 group"
               onclick="window.location='{{ route('coach.clients.show', $c) }}'"
               tabindex="0"
               role="button"
@@ -63,6 +63,10 @@
             {{-- E-mail --}}
             <td class="px-3 py-2">
               <span class="text-gray-700">{{ $c->email }}</span>
+            </td>
+
+            <td class="px-3 py-2">
+              <span class="text-gray-700"> {{ $c->email }}</span>
             </td>
 
             {{-- Telefoonnummer --}}
@@ -105,10 +109,9 @@
                       title="Intake nog niet afgerond">
                   <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
                   Bezig
-                </span> 
+                </span>
 
               @endif
-
 
                 {{-- <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100/80 text-red-700 backdrop-blur-sm border border-red-200/50"
                       title="Verlopen op {{ $status['end_date'] ?? 'onbekend' }}">
