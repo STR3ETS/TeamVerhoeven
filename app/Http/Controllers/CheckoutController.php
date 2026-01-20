@@ -18,6 +18,7 @@ use Stripe\StripeClient;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NewIntakeNotification;
 use App\Mail\ClientWelcomeMail;
+use App\Mail\ClientRenewalNotification;
 
 class CheckoutController extends Controller
 {
@@ -1189,6 +1190,7 @@ class CheckoutController extends Controller
      * Stuur mails bij nieuwe user OF bij verlenging.
      * - Welkomstmail naar de klant (pakket-afhankelijk)
      * - Notificatie naar coach(es)
+     * - Bij verlenging: speciale renewal notificatie naar coach
      * 
      * @param bool $isRenewal Als true, verstuur altijd (ook bij bestaande user)
      */
@@ -1216,36 +1218,72 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            // Coach-specifieke mails op basis van preferred_coach
-            $preferred = $intake->payload['contact']['preferred_coach'] ?? 'none';
+            // 3) Coach notificatie - verschilt per situatie
+            if ($isRenewal) {
+                // Bij verlenging: stuur speciale renewal notificatie naar de toegewezen coach
+                $coach = $user->clientProfile?->coach;
+                
+                if ($coach && filter_var($coach->email, FILTER_VALIDATE_EMAIL)) {
+                    Mail::to($coach->email)->send(new ClientRenewalNotification($user, $coach, $intake, $order));
+                    
+                    Log::info('[notifyNewUserIfNeeded] renewal notification sent to coach', [
+                        'user_id' => $user->id,
+                        'coach_id' => $coach->id,
+                        'coach_email' => $coach->email,
+                    ]);
+                } else {
+                    // Fallback: stuur naar alle coaches als geen specifieke coach toegewezen
+                    $coachEmails = [
+                        'nicky2befitlifestyle@hotmail.com',
+                        'eline2befitlifestyle@hotmail.com',
+                        'roy@2befitlifestyle.nl',
+                    ];
 
-            /**
-             * Logica:
-             * - 'nicky'  => alleen Nicky
-             * - 'eline'  => alleen Eline
-             * - 'roy'    => alleen Roy
-             * - 'none'   => alle 3 (Nicky, Eline én Roy)
-             */
-            $coachEmails = match ($preferred) {
-                'nicky' => ['nicky2befitlifestyle@hotmail.com'],
-                'eline' => ['eline2befitlifestyle@hotmail.com'],
-                'roy'   => ['roy@2befitlifestyle.nl'],
-                default => [
-                    'nicky2befitlifestyle@hotmail.com',
-                    'eline2befitlifestyle@hotmail.com',
-                    'roy@2befitlifestyle.nl',
-                ],
-            };
+                    // Maak een dummy coach user voor de template
+                    $dummyCoach = new User(['name' => 'Team', 'email' => 'team@2befitlifestyle.nl']);
+                    
+                    foreach ($coachEmails as $coachEmail) {
+                        $dummyCoach->email = $coachEmail;
+                        Mail::to($coachEmail)->send(new ClientRenewalNotification($user, $dummyCoach, $intake, $order));
+                    }
 
-            foreach ($coachEmails as $coachEmail) {
-                Mail::to($coachEmail)->send(new NewIntakeNotification($user, $intake, $order));
+                    Log::info('[notifyNewUserIfNeeded] renewal notification sent to all coaches (no assigned coach)', [
+                        'user_id' => $user->id,
+                        'coaches' => $coachEmails,
+                    ]);
+                }
+            } else {
+                // Nieuwe klant: stuur intake notificatie naar coaches op basis van preferred_coach
+                $preferred = $intake->payload['contact']['preferred_coach'] ?? 'none';
+
+                /**
+                 * Logica:
+                 * - 'nicky'  => alleen Nicky
+                 * - 'eline'  => alleen Eline
+                 * - 'roy'    => alleen Roy
+                 * - 'none'   => alle 3 (Nicky, Eline én Roy)
+                 */
+                $coachEmails = match ($preferred) {
+                    'nicky' => ['nicky2befitlifestyle@hotmail.com'],
+                    'eline' => ['eline2befitlifestyle@hotmail.com'],
+                    'roy'   => ['roy@2befitlifestyle.nl'],
+                    default => [
+                        'nicky2befitlifestyle@hotmail.com',
+                        'eline2befitlifestyle@hotmail.com',
+                        'roy@2befitlifestyle.nl',
+                    ],
+                };
+
+                foreach ($coachEmails as $coachEmail) {
+                    Mail::to($coachEmail)->send(new NewIntakeNotification($user, $intake, $order));
+                }
+
+                Log::info('[notifyNewUserIfNeeded] coach notification sent', [
+                    'user_id' => $user->id,
+                    'coaches' => $coachEmails,
+                    'is_renewal' => $isRenewal,
+                ]);
             }
-
-            Log::info('[notifyNewUserIfNeeded] coach notification sent', [
-                'user_id' => $user->id,
-                'coaches' => $coachEmails,
-                'is_renewal' => $isRenewal,
-            ]);
 
         } catch (\Throwable $e) {
             Log::error('[notifyNewUserIfNeeded] mail failed', [
