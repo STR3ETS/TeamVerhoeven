@@ -1221,7 +1221,7 @@ class CheckoutController extends Controller
             // 3) Coach notificatie - verschilt per situatie
             if ($isRenewal) {
                 // Bij verlenging: stuur speciale renewal notificatie naar de toegewezen coach
-                $coach = $user->profile?->coach;
+                $coach = $user->clientProfile?->coach;
                 
                 if ($coach && filter_var($coach->email, FILTER_VALIDATE_EMAIL)) {
                     Mail::to($coach->email)->send(new ClientRenewalNotification($user, $coach, $intake, $order));

@@ -31,7 +31,7 @@ class ClientRenewalNotification extends Mailable
 
         // Bereken toegevoegde weken en totaal
         $this->addedWeeks = (int)($intake->payload['duration_weeks'] ?? 12);
-        $this->totalWeeks = (int)($client->profile->period_weeks ?? $this->addedWeeks);
+         $this->totalWeeks = (int)($client->clientProfile?->period_weeks ?? $this->addedWeeks);
 
         // Bereken einddatum
         $startDate = $intake->start_date;
