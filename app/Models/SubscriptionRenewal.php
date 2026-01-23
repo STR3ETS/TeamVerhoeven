@@ -34,13 +34,12 @@ class SubscriptionRenewal extends Model
 
     /**
      * Registreer een verlenging voor een user.
-     * Als al een record bestaat, doe niks.
      */
     public static function recordRenewal(int $userId): self
     {
-        return self::firstOrCreate(
-            ['user_id' => $userId],
-            ['first_renewed_at' => now()]
-        );
+        return self::create([
+            'user_id' => $userId,
+            'first_renewed_at' => now(),
+        ]);
     }
 }

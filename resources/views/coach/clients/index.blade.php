@@ -65,13 +65,9 @@
               <span class="text-gray-700">{{ $c->email }}</span>
             </td>
 
-            <td class="px-3 py-2">
-              <span class="text-gray-700"> {{ $c->email }}</span>
-            </td>
-
             {{-- Telefoonnummer --}}
             <td class="px-3 py-2">
-              <span class="text-gray-700">{{ $c->clientProfile->phone_e164 }}</span>
+              <span class="text-gray-700">{{ optional($c->clientProfile)->phone_e164 ?? '—' }}</span>
             </td>
 
             {{-- Status Label --}}

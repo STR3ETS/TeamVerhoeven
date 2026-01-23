@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\TrainingAssignment;
 use App\Models\TrainingSection;
+use App\Services\TrainingWeekService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +24,7 @@ class CoachPlanningController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        $trainingWeekService = app(TrainingWeekService::class);
         $totalWeeks = (int) optional($client->clientProfile)->period_weeks ?: 12;
 
         $week = (int) $request->integer('week', 1);
@@ -49,8 +51,12 @@ class CoachPlanningController extends Controller
             ->first();
 
         $planStartDate = $activeIntake && $activeIntake->start_date
-            ? Carbon::parse($activeIntake->start_date)->startOfWeek(Carbon::MONDAY)
-            : Carbon::now()->startOfWeek(Carbon::MONDAY);
+            ? Carbon::parse($activeIntake->start_date)
+            : Carbon::now();
+
+        $planStartDate = $trainingWeekService->normalizeStartMonday($planStartDate);
+        $periodSegments = $trainingWeekService->periodSegmentsForUser($client);
+        $currentWeekHeader = $trainingWeekService->formatWeekHeader($planStartDate, $week, $periodSegments);
 
         return view('coach.planning.create', [
             'client'        => $client,
@@ -59,6 +65,8 @@ class CoachPlanningController extends Controller
             'week'          => $week,
             'totalWeeks'    => $totalWeeks,
             'planStartDate' => $planStartDate,
+            'periodSegments' => $periodSegments,
+            'currentWeekHeader' => $currentWeekHeader,
         ]);
     }
 

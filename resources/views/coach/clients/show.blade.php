@@ -166,6 +166,7 @@
 
   @php
     use Carbon\Carbon;
+    use App\Services\TrainingWeekService;
 
     // Week-setup (één keer centraal)
     $profile    = $client->clientProfile;
@@ -173,31 +174,31 @@
     $week       = (int) request('week', 1);
     if ($week < 1 || $week > $totalWeeks) { $week = 1; }
 
+  $trainingWeekService = app(TrainingWeekService::class);
+  $periodSegments = $trainingWeekService->periodSegmentsForUser($client);
+
     // Start van het trainingsplan:
     // 1) als je ooit een plan_start_date-kolom toevoegt aan client_profiles → eerst daarop
     // 2) anders, pak de laatste intake.start_date (als die gevuld is)
     // 3) fallback: huidige week maandag
     if (!empty($profile?->plan_start_date)) {
-        $planStart = Carbon::parse($profile->plan_start_date)->startOfWeek(Carbon::MONDAY);
+    $planStart = $trainingWeekService->normalizeStartMonday($profile->plan_start_date);
     } else {
         $latestIntake = $client->intakes()->orderByDesc('start_date')->first();
         if ($latestIntake && $latestIntake->start_date) {
-            $planStart = Carbon::parse($latestIntake->start_date)->startOfWeek(Carbon::MONDAY);
+      $planStart = $trainingWeekService->normalizeStartMonday($latestIntake->start_date);
         } else {
-            $planStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
+      $planStart = $trainingWeekService->normalizeStartMonday(Carbon::now());
         }
     }
 
     // Huidige trainingsweek uitrekenen
-    $currentStart = $planStart->copy()->addWeeks($week - 1);
-    $currentEnd   = $currentStart->copy()->endOfWeek(Carbon::SUNDAY);
-    $currentCalW  = $currentStart->isoWeek; // kalenderweek
+  [$currentStart, $currentEnd] = $trainingWeekService->getWeekDates($planStart, $week, $periodSegments);
+  $currentCalW  = $currentStart->isoWeek; // kalenderweek
   @endphp
   <h2 class="text-lg font-bold mb-1">Planning</h2>
   <p class="text-xs text-black opacity-60 font-semibold mb-3">
-    Week {{ $week }}
-    · KW {{ $currentCalW }}
-    · {{ $currentStart->format('d-m') }} t/m {{ $currentEnd->format('d-m-Y') }}
+    {{ $trainingWeekService->formatWeekHeader($planStart, $week, $periodSegments) }}
   </p>
 <div id="planning-root" data-current-week="{{ $week }}">
   @php
