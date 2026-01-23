@@ -3,10 +3,15 @@
 
 @section('content')
 @php
+  use App\Services\TrainingWeekService;
+
   /** @var \Carbon\Carbon|\Illuminate\Support\Carbon|string|null $planStartDate */
+  $trainingWeekService = app(TrainingWeekService::class);
   $planStart = isset($planStartDate)
-      ? \Carbon\Carbon::parse($planStartDate)->startOfWeek(\Carbon\Carbon::MONDAY)
-      : \Carbon\Carbon::now()->startOfWeek(\Carbon\Carbon::MONDAY);
+      ? $trainingWeekService->normalizeStartMonday($planStartDate)
+      : $trainingWeekService->normalizeStartMonday(\Carbon\Carbon::now());
+
+  $periodSegments = $periodSegments ?? $trainingWeekService->periodSegmentsForUser($client);
 @endphp
 
 <a href="{{ route('coach.clients.show', $client) }}"
@@ -25,10 +30,9 @@
   <div class="flex flex-wrap gap-2">
   @for($w=1; $w <= ($totalWeeks ?? 1); $w++)
     @php
-      // start/eind van deze trainingsweek
-      $weekStart = $planStart->copy()->addWeeks($w - 1);
-      $weekEnd   = $weekStart->copy()->endOfWeek(\Carbon\Carbon::SUNDAY);
-      $calWeek   = $weekStart->isoWeek; // kalenderweeknummer
+      // start/eind van deze trainingsweek (incl. gap-weken)
+      [$weekStart, $weekEnd] = $trainingWeekService->getWeekDates($planStart, $w, $periodSegments);
+      $calWeek = $weekStart->isoWeek; // kalenderweeknummer
     @endphp
 
     <a href="{{ route('coach.clients.trainingplan', [$client, 'week' => $w]) }}"
@@ -51,15 +55,12 @@
       <div class="max-h-[60vh] overflow-y-auto">
         @php
           $currentWeek  = $week ?? 1;
-          $currentStart = $planStart->copy()->addWeeks($currentWeek - 1);
-          $currentEnd   = $currentStart->copy()->endOfWeek(\Carbon\Carbon::SUNDAY);
-          $currentCalW  = $currentStart->isoWeek;
+          [$currentStart, $currentEnd] = $trainingWeekService->getWeekDates($planStart, $currentWeek, $periodSegments);
+          $currentCalW = $currentStart->isoWeek;
         @endphp
 
         <h3 class="text-sm font-semibold opacity-50 mb-4">
-          Week {{ $currentWeek }}
-          · KW {{ $currentCalW }}
-          · {{ $currentStart->format('d-m') }} t/m {{ $currentEnd->format('d-m-Y') }}
+          {{ $currentWeekHeader ?? $trainingWeekService->formatWeekHeader($planStart, $currentWeek, $periodSegments) }}
         </h3>
 
         @php
