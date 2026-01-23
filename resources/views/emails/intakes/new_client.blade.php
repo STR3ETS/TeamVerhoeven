@@ -153,7 +153,9 @@
                                     </tr>
                                     <tr>
                                         <td class="label">Startdatum:</td>
-                                        <td class="value">{{ $intake->start_date ?? '-' }}</td>
+                                        <td class="value">
+                                            {{ $intake->start_date ? \Carbon\Carbon::parse($intake->start_date)->format('d-m-Y') : '-' }}
+                                        </td>
                                     </tr>
                                 </table>
 

@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\User;
 use App\Models\Intake;
 use App\Models\Order;
+use App\Services\TrainingWeekService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -31,12 +32,18 @@ class ClientRenewalNotification extends Mailable
 
         // Bereken toegevoegde weken en totaal
         $this->addedWeeks = (int)($intake->payload['duration_weeks'] ?? 12);
-         $this->totalWeeks = (int)($client->clientProfile?->period_weeks ?? $this->addedWeeks);
+        $this->totalWeeks = (int)($client->clientProfile?->period_weeks ?? $this->addedWeeks);
 
-        // Bereken einddatum
+        // Bereken einddatum (incl. gap-weken)
         $startDate = $intake->start_date;
         if ($startDate) {
-            $this->endDate = $startDate->copy()->addWeeks($this->totalWeeks)->format('d-m-Y');
+            $trainingWeekService = app(TrainingWeekService::class);
+            $segments = $trainingWeekService->periodSegmentsForUser($client);
+            $totalWeeks = array_sum($segments) ?: $this->totalWeeks;
+
+            [, $weekEnd] = $trainingWeekService->getWeekDates($startDate, $totalWeeks, $segments);
+            $this->totalWeeks = $totalWeeks;
+            $this->endDate = $weekEnd->format('d-m-Y');
         } else {
             $this->endDate = null;
         }
