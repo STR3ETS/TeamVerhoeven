@@ -297,28 +297,6 @@
       <div>
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-md font-semibold">Kies je pakket</h3>
-
-          <div class="flex items-center gap-2">
-            <!-- Prev -->
-            <button type="button"
-                    class="w-8 h-8 rounded-lg border border-gray-300 text-sm transition flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                    x-show="swiperReady"
-                    :disabled="swiperAtStart"
-                    @click="swiperPrev()"
-                    aria-label="Vorige">
-              <i class="fa-solid fa-right-long fa-sm fa-flip-horizontal"></i>
-            </button>
-
-            <!-- Next -->
-            <button type="button"
-                    class="w-8 h-8 rounded-lg border border-gray-300 text-sm transition flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                    x-show="swiperReady"
-                    :disabled="swiperAtEnd"
-                    @click="swiperNext()"
-                    aria-label="Volgende">
-              <i class="fa-solid fa-right-long fa-sm"></i>
-            </button>
-          </div>
         </div>
 
         <div class="relative mb-6">
@@ -332,8 +310,7 @@
             </div>
           </template>
 
-          <div class="swiper packages-swiper px-6">
-            <div class="swiper-wrapper">
+          <div class="flex flex-wrap -mx-2">
               @php
                 $packages = [
                   [
@@ -383,52 +360,52 @@
                       ]],
                     ],
                   ],
-                  [
-                    'key' => 'pakket_b',
-                    'title' => 'Chasing Goals Pakket',
-                    'price' => ['label' => 'Vanaf 80,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €240 totaal bij 12 weken'],
-                    'badge' => '10,- korting per 4 weken bij 24 weken traject!',
-                    'cta' => ['discount' => '10,- Korting'],
-                    'price_12w' => 90,
-                    'price_24w' => 80,
-                    'feature_groups' => [
-                      ['title' => 'Dashboard','items' => [
-                        ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
-                        ['text' => '30 min call met coach', 'on' => true],
-                      ]],
-                      ['title' => 'Gratis intake','items' => [
-                        ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
-                      ]],
-                      ['title' => 'Intesten','items' => [
-                        ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
-                      ]],
-                      ['title' => 'Trainingsschema','items' => [
-                        ['text' => 'Persoonlijk afgestemd', 'on' => true],
-                        ['text' => 'Tot 6 dagen per week gevuld', 'on' => true],
-                        ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
-                        ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken indien nodig', 'on' => true],
-                        ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => false],
-                      ]],
-                      ['title' => 'Begeleiding Trainingsschema','items' => [
-                        ['text' => 'Inzage techniek en filmpjes', 'on' => true],
-                        ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
-                        ['text' => 'Maandelijkse check-up trainingsplan', 'on' => true],
-                        ['text' => 'Updates via de app', 'on' => true],
-                        ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => true],
-                      ]],
-                      ['title' => 'Eindtest','items' => [
-                        ['text' => 'Progressie vaststellen', 'on' => true],
-                        ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
-                        ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
-                      ]],
-                      ['title' => 'Kortingen + Prijzen','items' => [
-                        // ['text' => '10% militair / veteraan korting', 'on' => true],
-                        ['text' => '15% 2BeFit Supplements korting', 'on' => true],
-                        ['text' => '10% PT 2BeFit korting', 'on' => true],
-                        ['text' => 'Prijs per 4 weken', 'on' => true],
-                      ]],
-                    ],
-                  ],
+                  // [
+                  //   'key' => 'pakket_b',
+                  //   'title' => 'Chasing Goals Pakket',
+                  //   'price' => ['label' => 'Vanaf 80,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €240 totaal bij 12 weken'],
+                  //   'badge' => '10,- korting per 4 weken bij 24 weken traject!',
+                  //   'cta' => ['discount' => '10,- Korting'],
+                  //   'price_12w' => 90,
+                  //   'price_24w' => 80,
+                  //   'feature_groups' => [
+                  //     ['title' => 'Dashboard','items' => [
+                  //       ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
+                  //       ['text' => '30 min call met coach', 'on' => true],
+                  //     ]],
+                  //     ['title' => 'Gratis intake','items' => [
+                  //       ['text' => 'Vragenlijst voor jouw persoonlijke trainingsschema', 'on' => true],
+                  //     ]],
+                  //     ['title' => 'Intesten','items' => [
+                  //       ['text' => 'Afstemmen trainingsprogramma', 'on' => true],
+                  //     ]],
+                  //     ['title' => 'Trainingsschema','items' => [
+                  //       ['text' => 'Persoonlijk afgestemd', 'on' => true],
+                  //       ['text' => 'Tot 6 dagen per week gevuld', 'on' => true],
+                  //       ['text' => 'Na 11 weken check-up, bij 24 weken na 11 weken een tussenmeting', 'on' => true],
+                  //       ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken indien nodig', 'on' => true],
+                  //       ['text' => '1x per maand live video-call van 20-30 min voor vragen en uitleg', 'on' => false],
+                  //     ]],
+                  //     ['title' => 'Begeleiding Trainingsschema','items' => [
+                  //       ['text' => 'Inzage techniek en filmpjes', 'on' => true],
+                  //       ['text' => 'Optie tot vragen stellen via chat', 'on' => true],
+                  //       ['text' => 'Maandelijkse check-up trainingsplan', 'on' => true],
+                  //       ['text' => 'Updates via de app', 'on' => true],
+                  //       ['text' => 'Mogelijkheid tot aanpassen trainingsplan 1x per 12 weken', 'on' => true],
+                  //     ]],
+                  //     ['title' => 'Eindtest','items' => [
+                  //       ['text' => 'Progressie vaststellen', 'on' => true],
+                  //       ['text' => 'E.v.t. vervolg trainingsschema, volgende trasiningsdoelen stellen', 'on' => true],
+                  //       ['text' => '30 min call met coach t.b.v. evaluatie trainingsplan', 'on' => true],
+                  //     ]],
+                  //     ['title' => 'Kortingen + Prijzen','items' => [
+                  //       // ['text' => '10% militair / veteraan korting', 'on' => true],
+                  //       ['text' => '15% 2BeFit Supplements korting', 'on' => true],
+                  //       ['text' => '10% PT 2BeFit korting', 'on' => true],
+                  //       ['text' => 'Prijs per 4 weken', 'on' => true],
+                  //     ]],
+                  //   ],
+                  // ],
                   [
                     'key' => 'pakket_a',
                     'title' => 'Basis Pakket',
@@ -477,64 +454,65 @@
               @endphp
 
               @foreach ($packages as $pkg)
-                <div class="swiper-slide">
-                  <div class="relative block rounded-2xl border p-4 transition hover:shadow-sm border-gray-300 h-full">
-                    <div class="flex flex-col gap-6 h-full">
-                      <div class="flex flex-col gap-4">
-                        <h4 class="font-bold text-lg text-black -mb-4">{{ $pkg['title'] }}</h4>
+    <div class="w-full md:w-1/2 px-2 mb-4">
+      <div class="relative block rounded-2xl border p-4 transition hover:shadow-sm border-gray-300">
+        <div class="flex flex-col gap-6">
+          <div class="flex flex-col gap-4">
+            <h4 class="font-bold text-lg text-black -mb-4">{{ $pkg['title'] }}</h4>
 
-                        <div>
-                          <p class="text-3xl font-black text-black">
-                            {{ $pkg['price']['label'] }} <span class="text-sm">{{ $pkg['price']['suffix'] }}</span>
-                          </p>
-                          <span class="text-xs text-gray-500">{{ $pkg['price']['total'] }}</span>
-                        </div>
+            <div>
+              <p class="text-3xl font-black text-black">
+                {{ $pkg['price']['label'] }} <span class="text-sm">{{ $pkg['price']['suffix'] }}</span>
+              </p>
+              <span class="text-xs text-gray-500">{{ $pkg['price']['total'] }}</span>
+            </div>
 
-                        <p class="px-2 py-1 bg-[#c8ab7a]/75 text-white text-xs font-semibold rounded w-fit">
-                          {{ $pkg['badge'] }}
-                        </p>
+            <p class="px-2 py-1 bg-[#c8ab7a]/75 text-white text-xs font-semibold rounded w-fit">
+              {{ $pkg['badge'] }}
+            </p>
 
-                        <hr class="border-gray-200">
+            <hr class="border-gray-200">
 
-                        <ul class="flex flex-col gap-4">
-                          @foreach ($pkg['feature_groups'] as $group)
-                            <div class="flex flex-col gap-2">
-                              <li class="text-sm font-bold">{{ $group['title'] }}</li>
-                              @foreach ($group['items'] as $item)
-                                @php $on = $item['on']; @endphp
-                                <li class="flex items-center gap-4">
-                                  <i class="fa-solid fa-check {{ $on ? 'text-green-500' : 'text-gray-300' }}"></i>
-                                  <p class="text-xs font-semibold {{ $on ? 'text-black' : 'text-gray-400' }}">{{ $item['text'] }}</p>
-                                </li>
-                              @endforeach
-                            </div>
-                          @endforeach
-                        </ul>
-
-                        <hr class="border-gray-200">
-                      </div>
-
-                      <div class="mt-auto flex flex-wrap gap-2">
-                        <button type="button" class="cursor-pointer w-full py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded"
-                                :disabled="isPaying"
-                                @click="choosePackage('{{ $pkg['key'] }}', 24)">
-                          24 weken traject kiezen
-                          <span class="px-2 py-1 text-xs ml-2 rounded bg-[#e5c791]">{{ $pkg['cta']['discount'] }}</span>
-                        </button>
-
-                        <button type="button" class="cursor-pointer w-full py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded"
-                                :disabled="isPaying"
-                                @click="choosePackage('{{ $pkg['key'] }}', 12)">
-                          12 weken traject kiezen
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+            <ul class="flex flex-col gap-4">
+              @foreach ($pkg['feature_groups'] as $group)
+                <div class="flex flex-col gap-2">
+                  <li class="text-sm font-bold">{{ $group['title'] }}</li>
+                  @foreach ($group['items'] as $item)
+                    @php $on = $item['on']; @endphp
+                    <li class="flex items-center gap-4">
+                      <i class="fa-solid fa-check {{ $on ? 'text-green-500' : 'text-gray-300' }}"></i>
+                      <p class="text-xs font-semibold {{ $on ? 'text-black' : 'text-gray-400' }}">{{ $item['text'] }}</p>
+                    </li>
+                  @endforeach
                 </div>
               @endforeach
-            </div>
+            </ul>
+
+            <hr class="border-gray-200">
+          </div>
+
+          {{-- knoppen onderaan --}}
+          <div class="mt-auto flex flex-col gap-2">
+            <button type="button"
+                    class="cursor-pointer w-full py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded"
+                    :disabled="isPaying"
+                    @click="choosePackage('{{ $pkg['key'] }}', 24)">
+              24 weken traject kiezen
+              <span class="px-2 py-1 text-xs ml-2 rounded bg-[#e5c791]">{{ $pkg['cta']['discount'] }}</span>
+            </button>
+
+            <button type="button"
+                    class="cursor-pointer w-full py-3 bg-[#c8ab7a] hover:bg-[#a38b62] transition duration-300 text-white font-medium text-sm rounded"
+                    :disabled="isPaying"
+                    @click="choosePackage('{{ $pkg['key'] }}', 12)">
+              12 weken traject kiezen
+            </button>
           </div>
         </div>
+      </div>
+    </div>
+  @endforeach
+</div>
 
         <div class="flex items-center justify-between gap-2">
           <button type="button" class="{{ $btnGhost }}" @click="prev()">Vorige</button>
