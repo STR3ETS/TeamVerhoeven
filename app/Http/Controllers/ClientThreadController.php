@@ -59,38 +59,69 @@ class ClientThreadController extends Controller
         // 1) Eerst proberen via client_profiles.coach_id
         $coachUserId = $user->clientProfile?->coach_id;
 
-        // 2) Zo niet, kies een actieve coach
+        // 2) Geen coach gekoppeld? Maak threads voor alle actieve coaches
         if (!$coachUserId) {
-            $coachUserId = User::query()
+            $coaches = User::query()
                 ->where('role', 'coach')
                 ->whereHas('coachProfile', fn($q) => $q->where('is_active', true))
-                ->value('id');
+                ->get(['id', 'email']);
+
+            if ($coaches->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'coach_user_id' => 'Er is nog geen coach gekoppeld aan je profiel en er is geen actieve coach beschikbaar. Koppel eerst een coach.',
+                ]);
+            }
+
+            $threads = [];
+            foreach ($coaches as $coach) {
+                $existing = Thread::query()
+                    ->where('client_user_id', $userId)
+                    ->where('coach_user_id', $coach->id)
+                    ->latest()
+                    ->first();
+
+                $thread = $existing ?: Thread::create([
+                    'client_user_id' => $userId,
+                    'coach_user_id'  => $coach->id,
+                    'subject'        => $data['subject'] ?? null,
+                ]);
+
+                $thread->load(['clientUser', 'coachUser']);
+                $threads[] = $thread;
+
+                if (!$existing && $thread->coachUser && $thread->coachUser->email) {
+                    Mail::to($thread->coachUser->email)
+                        ->send(new NewThreadNotification($thread));
+                }
+            }
+
+            $redirectThread = $threads[0] ?? null;
+            if (!$redirectThread) {
+                throw ValidationException::withMessages([
+                    'coach_user_id' => 'Er kon geen gesprek worden aangemaakt voor de beschikbare coaches.',
+                ]);
+            }
+
+            return redirect()->route('client.threads.show', $redirectThread);
         }
 
-        // 3) Als er nog steeds geen coach is, validatiefout i.p.v. null in DB
-        if (!$coachUserId) {
-            throw ValidationException::withMessages([
-                'coach_user_id' => 'Er is nog geen coach gekoppeld aan je profiel en er is geen actieve coach beschikbaar. Koppel eerst een coach.',
-            ]);
-        }
-
-        // 4) Thread aanmaken
+        // 3) Thread aanmaken met gekoppelde coach
         $thread = Thread::create([
             'client_user_id' => $userId,
             'coach_user_id'  => $coachUserId,
             'subject'        => $data['subject'] ?? null,
         ]);
 
-        // 5) Relaties laden voor de mail
+        // 4) Relaties laden voor de mail
         $thread->load(['clientUser', 'coachUser']);
 
-        // 6) Mail sturen naar de coach van deze thread
+        // 5) Mail sturen naar de coach van deze thread
         if ($thread->coachUser && $thread->coachUser->email) {
             Mail::to($thread->coachUser->email)
                 ->send(new NewThreadNotification($thread));
         }
 
-        // 7) Door naar de detailpagina van het gesprek
+        // 6) Door naar de detailpagina van het gesprek
         return redirect()->route('client.threads.show', $thread);
     }
 
