@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ASSIGN_URL    = "{{ route('coach.clients.planning.assign', $client) }}";
   const UNASSIGN_URL  = "{{ route('coach.clients.planning.unassign', $client) }}";
   const REORDER_URL   = "{{ route('coach.clients.planning.reorder', $client) }}";
+  const NOTES_URL     = "{{ route('coach.clients.planning.notes', $client) }}";
   const ACTIVE_WEEK   = window.__activeWeek || 1;
 
   // ==== Soft reload helpers for library scroll position ====
@@ -336,7 +337,52 @@ document.addEventListener('DOMContentLoaded', () => {
     cardEl.appendChild(btn);
   }
 
-  function addAssignedCard(zone, cardId, assignmentId = null) {
+  function addNotesField(cardEl, assignmentId, existingNotes = '') {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mt-2 border-t border-gray-200 pt-2';
+    wrapper.innerHTML = `
+      <textarea
+        class="w-full text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-2 resize-none focus:outline-none focus:ring-1 focus:ring-[#c8ab7a] focus:border-[#c8ab7a] placeholder-gray-400"
+        rows="2"
+        maxlength="500"
+        placeholder="Notitie: gewichten, tips, aandachtspunten..."
+      >${existingNotes}</textarea>
+      <div class="js-notes-status text-[10px] text-gray-400 mt-0.5 h-3"></div>
+    `;
+
+    const textarea = wrapper.querySelector('textarea');
+    const statusEl = wrapper.querySelector('.js-notes-status');
+    let saveTimeout = null;
+
+    textarea.addEventListener('input', () => {
+      if (!assignmentId) return;
+      clearTimeout(saveTimeout);
+      statusEl.textContent = '';
+      saveTimeout = setTimeout(async () => {
+        try {
+          statusEl.textContent = 'Opslaan...';
+          await fetch(NOTES_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+            body: JSON.stringify({ assignment_id: assignmentId, coach_notes: textarea.value })
+          });
+          statusEl.textContent = 'Opgeslagen';
+          setTimeout(() => { if (statusEl.textContent === 'Opgeslagen') statusEl.textContent = ''; }, 2000);
+        } catch (e) {
+          console.error(e);
+          statusEl.textContent = 'Fout bij opslaan';
+        }
+      }, 600);
+    });
+
+    // Prevent drag when interacting with textarea
+    textarea.addEventListener('mousedown', (e) => e.stopPropagation());
+    textarea.addEventListener('dragstart', (e) => e.preventDefault());
+
+    cardEl.appendChild(wrapper);
+  }
+
+  function addAssignedCard(zone, cardId, assignmentId = null, coachNotes = '') {
     removePlaceholder(zone);
 
     const src = document.querySelector(`.js-card[data-card-id="${cardId}"]`);
@@ -357,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (assignmentId) clone.dataset.assignmentId = assignmentId;
 
     addRemoveButton(clone, zone);
+    addNotesField(clone, assignmentId, coachNotes);
     makeAssignedDraggable(clone);
 
     insertByPhase(zone, clone);
@@ -458,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const el = document.querySelector(`.day-dropzone[data-day="${day}"], .js-dropzone[data-day="${day}"]`);
       if (!el) return;
       items.sort((a,b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-      items.forEach((it) => addAssignedCard(el, it.training_card_id, it.assignment_id));
+      items.forEach((it) => addAssignedCard(el, it.training_card_id, it.assignment_id, it.coach_notes || ''));
     });
   }
 

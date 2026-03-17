@@ -35,12 +35,13 @@ class CoachPlanningController extends Controller
             ->where('week', $week)
             ->orderByRaw("FIELD(day,'mon','tue','wed','thu','fri','sat','sun')")
             ->orderBy('sort_order')
-            ->get(['id','day','training_card_id','sort_order'])
+            ->get(['id','day','training_card_id','sort_order','coach_notes'])
             ->map(fn($a) => [
                 'assignment_id'    => (int) $a->id,
                 'day'              => $a->day,
                 'training_card_id' => (int) $a->training_card_id,
                 'sort_order'       => (int) ($a->sort_order ?? 0),
+                'coach_notes'      => $a->coach_notes ?? '',
             ]);
 
         // 👉 Startdatum voor het trainingsplan:
@@ -135,6 +136,20 @@ class CoachPlanningController extends Controller
                 TrainingAssignment::where('id',$id)->update(['sort_order' => $pos++]);
             }
         }
+        return response()->json(['ok' => true]);
+    }
+
+    public function updateNotes(Request $request, User $client)
+    {
+        $data = $request->validate([
+            'assignment_id' => ['required','exists:training_assignments,id'],
+            'coach_notes'   => ['nullable','string','max:500'],
+        ]);
+
+        TrainingAssignment::where('id', $data['assignment_id'])
+            ->where('user_id', $client->id)
+            ->update(['coach_notes' => $data['coach_notes'] ?? '']);
+
         return response()->json(['ok' => true]);
     }
 

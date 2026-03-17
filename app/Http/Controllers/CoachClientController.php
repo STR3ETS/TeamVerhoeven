@@ -5,9 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\ClientProfile;
 use App\Models\Intake;
+use App\Models\Order;
+use App\Models\TrainingAssignment;
+use App\Models\SubscriptionRenewal;
 use App\Services\UhvCalculator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CoachClientController extends Controller
 {
@@ -70,7 +75,9 @@ class CoachClientController extends Controller
         if ($intake && $intake->start_date) {
             $startDate = Carbon::parse($intake->start_date);
             $periodWeeks = (int) ($profile->period_weeks ?? 12);
-            $endDate = $startDate->copy()->addWeeks($periodWeeks);
+            $renewalCount = Order::where('client_id', $client->id)->where('status', 'paid')->count();
+            $gapWeeks = max(0, $renewalCount - 1);
+            $endDate = $startDate->copy()->addWeeks($periodWeeks + $gapWeeks);
             
             $now = Carbon::now();
             $daysRemaining = (int) floor($now->diffInDays($endDate, false));
@@ -242,6 +249,46 @@ class CoachClientController extends Controller
             'profiles' => $profiles,
             'q'        => $q,
         ]);
+    }
+
+    /**
+     * Verwijder een klant en alle gerelateerde data.
+     */
+    public function destroy(User $client, Request $request)
+    {
+        $coach = $request->user();
+        $profile = ClientProfile::where('user_id', $client->id)->first();
+
+        // Alleen eigen klanten mogen verwijderd worden
+        if (!$profile || (int) $profile->coach_id !== (int) $coach->id) {
+            abort(403);
+        }
+
+        $clientName = $client->name;
+        $clientId = $client->id;
+
+        DB::transaction(function () use ($clientId) {
+            TrainingAssignment::where('user_id', $clientId)->delete();
+            \App\Models\ClientTodoItem::where('client_user_id', $clientId)->delete();
+            Intake::where('client_id', $clientId)->delete();
+            Order::where('client_id', $clientId)->delete();
+            SubscriptionRenewal::where('user_id', $clientId)->delete();
+            ClientProfile::where('user_id', $clientId)->delete();
+
+            $user = User::find($clientId);
+            if ($user) {
+                $user->delete();
+            }
+        });
+
+        Log::info('[coach] client deleted', [
+            'coach_id' => $coach->id,
+            'client_id' => $clientId,
+            'client_name' => $clientName,
+        ]);
+
+        return redirect()->route('coach.clients.index')
+            ->with('success', "{$clientName} is verwijderd.");
     }
 
     public function claimStore(Request $request, ClientProfile $profile)

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Intake;
+use App\Models\Order;
 use Carbon\Carbon;
 
 class SubscriptionStatusService
@@ -46,7 +47,14 @@ class SubscriptionStatusService
         $periodWeeks = $profile?->period_weeks ?? 12;
 
         $startDate = Carbon::parse($intake->start_date)->startOfDay();
-        $endsAt = $startDate->copy()->addWeeks($periodWeeks)->endOfDay(); // End of the last day
+
+        // Tel het aantal verlengingen: elke verlenging = 1 gap week pauze
+        $renewalCount = Order::where('client_id', $user->id)
+            ->where('status', 'paid')
+            ->count();
+        $gapWeeks = max(0, $renewalCount - 1);
+
+        $endsAt = $startDate->copy()->addWeeks($periodWeeks + $gapWeeks)->endOfDay(); // End of the last day
         $deleteAt = $endsAt->copy()->addDay()->endOfDay(); // 1 day after expiry (end of that day)
         $now = Carbon::now();
         

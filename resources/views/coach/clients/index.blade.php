@@ -37,6 +37,7 @@
           <th class="px-3 py-2 text-left">Telefoonnummer</th>
           <th class="px-3 py-2 text-left">Status</th>
           <th class="px-3 py-2 text-left">Verloopt op</th>
+          <th class="px-3 py-2 text-right">Acties</th>
         </tr>
       </thead>
   
@@ -128,10 +129,20 @@
                 <span class="text-gray-400 text-xs">Bezig met de intake</span>
               @endif
             </td>
+
+            {{-- Acties --}}
+            <td class="px-3 py-2 text-right" onclick="event.stopPropagation()">
+              <button type="button"
+                      onclick="openDeleteModal('{{ $c->id }}', '{{ addslashes($c->name) }}')"
+                      class="cursor-pointer text-red-400 hover:text-red-600 transition duration-150 p-1"
+                      title="Klant verwijderen">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </td>
           </tr>
         @empty
           <tr>
-            <td colspan="5" class="px-3 py-6 text-center text-gray-500">
+            <td colspan="6" class="px-3 py-6 text-center text-gray-500">
               Geen cliënten gevonden.
             </td>
           </tr>
@@ -143,4 +154,48 @@
     {{ $clients->withQueryString()->links() }}
   </div>
 </div>
+{{-- Success melding --}}
+@if(session('success'))
+  <div id="flash-success" class="fixed top-6 right-6 z-50 bg-green-50 border border-green-200 text-green-800 px-5 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2">
+    <i class="fa-solid fa-check-circle"></i>
+    {{ session('success') }}
+  </div>
+  <script>setTimeout(() => document.getElementById('flash-success')?.remove(), 4000);</script>
+@endif
+
+{{-- Delete bevestigingsmodal --}}
+<div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="closeDeleteModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Klant verwijderen</h3>
+    <p class="text-sm text-gray-600 mb-5">
+      Weet je zeker dat je <strong id="delete-client-name"></strong> wilt verwijderen? Alle gegevens, trainingsschema's en bestellingen worden permanent verwijderd.
+    </p>
+    <form id="delete-form" method="POST">
+      @csrf
+      @method('DELETE')
+      <div class="flex gap-3 justify-end">
+        <button type="button" onclick="closeDeleteModal()"
+                class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition duration-150">
+          Annuleren
+        </button>
+        <button type="submit"
+                class="cursor-pointer px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition duration-150">
+          Verwijderen
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openDeleteModal(clientId, clientName) {
+    document.getElementById('delete-client-name').textContent = clientName;
+    document.getElementById('delete-form').action = '/coach/clients/' + clientId;
+    document.getElementById('delete-modal').classList.remove('hidden');
+  }
+  function closeDeleteModal() {
+    document.getElementById('delete-modal').classList.add('hidden');
+  }
+</script>
 @endsection

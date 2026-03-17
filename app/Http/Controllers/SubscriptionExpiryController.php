@@ -61,10 +61,12 @@ class SubscriptionExpiryController extends Controller
             return response()->json(['show_popup' => false]);
         }
 
-        // Bereken einddatum op basis van startdatum + period_weeks
+        // Bereken einddatum op basis van startdatum + period_weeks + gap weeks
         $startDate = Carbon::parse($latestIntake->start_date);
         $periodWeeks = (int) ($profile->period_weeks ?? 12);
-        $endDate = $startDate->copy()->addWeeks($periodWeeks);
+        $renewalCount = Order::where('client_id', $user->id)->where('status', 'paid')->count();
+        $gapWeeks = max(0, $renewalCount - 1);
+        $endDate = $startDate->copy()->addWeeks($periodWeeks + $gapWeeks);
 
         // Check of we binnen 7 dagen van de einddatum zijn of al verlopen
         $now = Carbon::now();
