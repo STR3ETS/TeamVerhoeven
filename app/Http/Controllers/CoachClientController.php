@@ -273,6 +273,7 @@ class CoachClientController extends Controller
             Intake::where('client_id', $clientId)->delete();
             Order::where('client_id', $clientId)->delete();
             SubscriptionRenewal::where('user_id', $clientId)->delete();
+            \App\Models\WeeklyCheckin::where('user_id', $clientId)->delete();
             ClientProfile::where('user_id', $clientId)->delete();
 
             $user = User::find($clientId);

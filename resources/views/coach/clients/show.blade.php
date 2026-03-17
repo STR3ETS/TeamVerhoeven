@@ -354,6 +354,69 @@
   @endif
 </div>
 
+{{-- Wekelijkse check-in (alleen als Elite pakket) --}}
+@php
+  $clientIntake = $client->intakes()->whereNotNull('start_date')->orderByDesc('created_at')->first();
+  $clientPackage = $clientIntake->payload['package'] ?? null;
+  $weeklyCheckin = null;
+  if ($clientPackage === 'pakket_c') {
+      $weeklyCheckin = \App\Models\WeeklyCheckin::where('user_id', $client->id)
+          ->where('week_number', $week)
+          ->first();
+  }
+@endphp
+
+@if($clientPackage === 'pakket_c')
+  <h2 class="text-lg font-bold mb-2">Check-in week {{ $week }}</h2>
+  @if($weeklyCheckin)
+    @php
+      $checkinFields = [
+          ['key' => 'recovery',       'label' => 'Herstel / energie'],
+          ['key' => 'training_feel',  'label' => 'Trainingsgevoel'],
+          ['key' => 'sleep_quality',  'label' => 'Slaapkwaliteit'],
+          ['key' => 'stress',         'label' => 'Stress / mentaal'],
+          ['key' => 'progression',    'label' => 'Progressiegevoel'],
+          ['key' => 'soreness',       'label' => 'Spierpijn / pijntjes'],
+          ['key' => 'motivation',     'label' => 'Motivatie'],
+      ];
+      $avg = $weeklyCheckin->average();
+    @endphp
+    <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-sm text-black font-semibold opacity-50">Ingevuld op {{ $weeklyCheckin->created_at->format('d-m-Y H:i') }}</div>
+        <div class="text-sm font-bold text-[#c8ab7a]">Gemiddeld: {{ $avg }}/10</div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        @foreach($checkinFields as $field)
+          @php
+            $val = $weeklyCheckin->{$field['key']};
+            $note = $weeklyCheckin->{$field['key'] . '_note'};
+            $color = $val >= 7 ? 'text-green-600' : ($val >= 4 ? 'text-orange-500' : 'text-red-500');
+            $bg = $val >= 7 ? 'bg-green-50 border-green-200' : ($val >= 4 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200');
+          @endphp
+          <div class="p-3 rounded-2xl border {{ $bg }}">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-black/70">{{ $field['label'] }}</span>
+              <span class="text-sm font-bold {{ $color }}">{{ $val }}/10</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5">
+              <div class="h-1.5 rounded-full {{ $val >= 7 ? 'bg-green-500' : ($val >= 4 ? 'bg-orange-400' : 'bg-red-500') }}" style="width: {{ $val * 10 }}%"></div>
+            </div>
+            @if($note)
+              <p class="text-[11px] text-gray-500 mt-1.5 italic">{{ $note }}</p>
+            @endif
+          </div>
+        @endforeach
+      </div>
+    </div>
+  @else
+    <div class="p-5 bg-white rounded-3xl border border-gray-300 mb-6">
+      <p class="text-sm text-gray-500">Nog geen check-in ingevuld voor week {{ $week }}.</p>
+    </div>
+  @endif
+@endif
+
     <h2 class="text-lg font-bold mb-2">Informatie</h2>
   <section class="grid gap-4 grid-cols-1 mb-8">
     <div class="p-5 bg-white rounded-3xl border border-gray-300">

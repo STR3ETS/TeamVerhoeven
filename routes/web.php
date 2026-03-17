@@ -8,6 +8,7 @@ use App\Http\Controllers\CoachClientTodoController;
 use App\Http\Controllers\CoachThreadController;
 use App\Http\Controllers\MagicLoginController;
 use App\Http\Controllers\CoachPlanningController;
+use App\Http\Controllers\WeeklyCheckinController;
 use App\Http\Controllers\TrainingLibraryController;
 use App\Http\Controllers\SubscriptionExpiryController;
 use Illuminate\Http\Request;
@@ -103,6 +104,10 @@ Route::middleware(['auth', 'intake.complete'])->group(function () {
         Route::post('/threads',               [ClientThreadController::class, 'store'])->name('threads.store');
         Route::get('/threads/{thread}',       [ClientThreadController::class, 'show'])->name('threads.show');
         Route::post('/threads/{thread}/msg',  [ClientThreadController::class, 'storeMessage'])->name('threads.messages.store');
+
+        // Wekelijkse check-in (Elite pakket)
+        Route::get('/checkin/check',  [WeeklyCheckinController::class, 'check'])->name('checkin.check');
+        Route::post('/checkin',       [WeeklyCheckinController::class, 'store'])->name('checkin.store');
     });
 });
 

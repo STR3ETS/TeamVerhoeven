@@ -385,6 +385,9 @@
         {{-- Subscription Expiry Popup --}}
         @include('components.subscription-expiry-popup')
 
+        {{-- Weekly Check-in Modal (Elite) --}}
+        @include('components.weekly-checkin-modal')
+
         <script>
             const mobileMenu = document.getElementById('mobile-menu');
             document.getElementById('mobile-menu-open').addEventListener('click', function() {
