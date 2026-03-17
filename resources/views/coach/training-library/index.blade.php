@@ -274,11 +274,12 @@
                                 <div class="mt-3 space-y-2">
                                     @foreach($block->items as $item)
                                         {{-- FIX: geen form-in-form. Wrapper grid met 2 forms naast elkaar --}}
-                                        <div class="grid grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_auto] gap-2 items-end">
+                                        <div class="grid grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)_auto_auto] gap-2 items-end">
                                             {{-- UPDATE form (kolom 1-2) --}}
                                             <form action="{{ route('coach.training-library.items.update', $item) }}"
                                                   method="POST"
-                                                  class="col-span-2 grid grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)] gap-2 items-end">
+                                                  class="col-span-2 grid grid-cols-[minmax(0,1.5fr)_minmax(0,0.7fr)] gap-2 items-end js-item-form"
+                                                  data-item-id="{{ $item->id }}">
                                                 @csrf
                                                 @method('PATCH')
 
@@ -288,7 +289,7 @@
                                                     </label>
                                                     <input type="text" name="left_html"
                                                            value="{{ old('left_html', $item->left_html) }}"
-                                                           class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-xs"
+                                                           class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-xs js-item-input"
                                                            placeholder="Bijv. Hardlopen zone 1">
                                                 </div>
 
@@ -298,16 +299,23 @@
                                                     </label>
                                                     <input type="text" name="right_text"
                                                            value="{{ old('right_text', $item->right_text) }}"
-                                                           class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-xs"
+                                                           class="w-full px-3 py-1.5 rounded-2xl border border-gray-300 text-xs js-item-input"
                                                            placeholder="Bijv. 1 kilometer, 3 × 30 sec">
                                                 </div>
                                             </form>
 
-                                            {{-- DELETE form (kolom 3) --}}
+                                            {{-- SAVE knop (kolom 3) --}}
+                                            <button type="button"
+                                                    class="js-item-save hidden px-2 py-1.5 rounded-2xl bg-black hover:bg-[#c8ab7a] transition cursor-pointer text-white text-[10px] font-semibold mb-0.5"
+                                                    data-for-item="{{ $item->id }}">
+                                                <i class="fa-solid fa-check fa-sm"></i>
+                                            </button>
+
+                                            {{-- DELETE form (kolom 4) --}}
                                             <form action="{{ route('coach.training-library.items.destroy', $item) }}"
                                                   method="POST"
                                                   onsubmit="return confirm('Oefening verwijderen?');"
-                                                  class="flex items-center gap-1 pb-2 justify-end">
+                                                  class="flex items-center gap-1 pb-0.5 justify-end">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
@@ -523,6 +531,24 @@
 
   window.addEventListener('popstate', () => {
     softReload(window.location.href);
+  });
+
+  // Item inline edit: toon save-knop bij wijziging, submit form bij klik
+  document.addEventListener('input', (e) => {
+    if (!e.target.classList.contains('js-item-input')) return;
+    const form = e.target.closest('.js-item-form');
+    if (!form) return;
+    const itemId = form.dataset.itemId;
+    const saveBtn = document.querySelector(`.js-item-save[data-for-item="${itemId}"]`);
+    if (saveBtn) saveBtn.classList.remove('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.js-item-save');
+    if (!btn) return;
+    const itemId = btn.dataset.forItem;
+    const form = document.querySelector(`.js-item-form[data-item-id="${itemId}"]`);
+    if (form) form.requestSubmit();
   });
 })();
 </script>
