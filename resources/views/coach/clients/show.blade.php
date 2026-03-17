@@ -326,6 +326,13 @@
                         </ul>
                       </div>
                     @endforeach
+
+                    @if($a->coach_notes)
+                      <div class="mt-3 pt-2 border-t border-gray-200">
+                        <div class="text-[10px] font-semibold text-[#c8ab7a] uppercase tracking-wide mb-1">Notities:</div>
+                        <p class="text-xs text-gray-600">{{ $a->coach_notes }}</p>
+                      </div>
+                    @endif
                   </div>
                 @else
                   {{-- Fallback als kaart ontbreekt --}}

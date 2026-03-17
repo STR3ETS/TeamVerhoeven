@@ -355,21 +355,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let saveTimeout = null;
 
     textarea.addEventListener('input', () => {
-      if (!assignmentId) return;
+      if (!assignmentId) {
+        statusEl.textContent = 'Nog niet opgeslagen (sleep opnieuw)';
+        return;
+      }
       clearTimeout(saveTimeout);
       statusEl.textContent = '';
       saveTimeout = setTimeout(async () => {
         try {
           statusEl.textContent = 'Opslaan...';
-          await fetch(NOTES_URL, {
+          const res = await fetch(NOTES_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
-            body: JSON.stringify({ assignment_id: assignmentId, coach_notes: textarea.value })
+            body: JSON.stringify({ assignment_id: parseInt(assignmentId), coach_notes: textarea.value })
           });
+          if (!res.ok) {
+            const err = await res.text();
+            console.error('Notes save failed:', res.status, err);
+            statusEl.textContent = 'Fout bij opslaan';
+            return;
+          }
           statusEl.textContent = 'Opgeslagen';
           setTimeout(() => { if (statusEl.textContent === 'Opgeslagen') statusEl.textContent = ''; }, 2000);
         } catch (e) {
-          console.error(e);
+          console.error('Notes save error:', e);
           statusEl.textContent = 'Fout bij opslaan';
         }
       }, 600);
