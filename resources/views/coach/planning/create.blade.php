@@ -235,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ====== Reorder helpers (binnen dezelfde dag) ======
   let draggingAssigned = null;
+  let dragSourceZone = null;
 
   function phaseRank(phase) {
     const p = (phase || '').toLowerCase();
@@ -260,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cardEl.addEventListener('dragstart', (e) => {
       draggingAssigned = cardEl;
+      dragSourceZone = cardEl.closest('.day-dropzone, .js-dropzone');
       cardEl.classList.add('opacity-60', 'dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', 'reorder');
@@ -267,9 +269,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cardEl.addEventListener('dragend', () => {
       cardEl.classList.remove('opacity-60', 'dragging');
-      const zone = cardEl.closest('.day-dropzone, .js-dropzone');
-      if (zone) persistZoneOrder(zone);
+      const newZone = cardEl.closest('.day-dropzone, .js-dropzone');
+      if (newZone) {
+        // Persist order in the new zone (also updates day in backend)
+        persistZoneOrder(newZone);
+        // If card moved to a different day, also update old zone placeholder
+        if (dragSourceZone && dragSourceZone !== newZone) {
+          ensurePlaceholder(dragSourceZone);
+          persistZoneOrder(dragSourceZone);
+        }
+      }
       draggingAssigned = null;
+      dragSourceZone = null;
       if (window.ScrollTrigger) (window.__refreshPin?.() ?? ScrollTrigger.refresh());
     });
   }

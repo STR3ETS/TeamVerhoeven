@@ -120,20 +120,22 @@ class CoachPlanningController extends Controller
             'order.*' => ['integer','exists:training_assignments,id'],
         ]);
 
-        // optioneel extra beveiliging: check dat de ids inderdaad bij deze client/week/dag horen
+        // Check dat de ids bij deze client en week horen (dag mag verschillen voor verplaatsingen)
         $ids = $data['order'];
-        $existing = TrainingAssignment::whereIn('id',$ids)
-            ->where('user_id',$client->id)
-            ->where('day',$data['day'])
-            ->where('week',$data['week'])
+        $existing = TrainingAssignment::whereIn('id', $ids)
+            ->where('user_id', $client->id)
+            ->where('week', $data['week'])
             ->pluck('id')
             ->all();
 
-        // alleen de valide ids in volgorde updaten
+        // Update volgorde én dag (zodat kaarten tussen dagen verplaatst kunnen worden)
         $pos = 1;
         foreach ($ids as $id) {
             if (in_array($id, $existing, true)) {
-                TrainingAssignment::where('id',$id)->update(['sort_order' => $pos++]);
+                TrainingAssignment::where('id', $id)->update([
+                    'sort_order' => $pos++,
+                    'day' => $data['day'],
+                ]);
             }
         }
         return response()->json(['ok' => true]);
