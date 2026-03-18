@@ -101,40 +101,22 @@ class WeeklyCheckinController extends Controller
 
     /**
      * Bereken de huidige trainingsweek voor de klant.
+     * Gebruikt dezelfde getWeekDates() als de planningpagina zodat weeknummers 100% matchen.
      */
     private function getCurrentWeek($user, $intake): int
     {
         $trainingWeekService = app(TrainingWeekService::class);
-        $startMonday = $trainingWeekService->normalizeStartMonday($intake->start_date);
         $now = Carbon::now()->startOfDay();
-
-        if ($now->lt($startMonday)) {
-            return 0;
-        }
-
-        $diffWeeks = $startMonday->diffInWeeks($now);
         $periodSegments = $trainingWeekService->periodSegmentsForUser($user);
         $totalWeeks = array_sum($periodSegments);
 
-        // Account for gap weeks between segments
-        $currentWeek = 0;
-        $cumulativeReal = 0;
-        $cumulativeTotal = 0;
-
-        foreach ($periodSegments as $i => $segWeeks) {
-            if ($i > 0) {
-                $cumulativeTotal++; // gap week
-            }
-            for ($w = 1; $w <= $segWeeks; $w++) {
-                if ($cumulativeTotal >= $diffWeeks) {
-                    return $cumulativeReal + 1;
-                }
-                $cumulativeTotal++;
-                $cumulativeReal++;
+        for ($week = 1; $week <= $totalWeeks; $week++) {
+            [$weekStart, $weekEnd] = $trainingWeekService->getWeekDates($intake->start_date, $week, $periodSegments);
+            if ($now->between($weekStart->startOfDay(), $weekEnd->endOfDay())) {
+                return $week;
             }
         }
 
-        // Voorbij de laatste week
-        return min($cumulativeReal, $totalWeeks);
+        return 0;
     }
 }
