@@ -51,9 +51,16 @@ class WeeklyCheckinController extends Controller
             ->where('week_number', $checkinWeek)
             ->exists();
 
+        // Bereken de datums van de check-in week zodat de modal ze kan tonen
+        $trainingWeekService = app(TrainingWeekService::class);
+        $startMonday = $trainingWeekService->normalizeStartMonday($intake->start_date);
+        $periodSegments = $trainingWeekService->periodSegmentsForUser($user);
+        [$weekStart, $weekEnd] = $trainingWeekService->getWeekDates($intake->start_date, $checkinWeek, $periodSegments);
+
         return response()->json([
             'show' => !$exists,
             'week_number' => $checkinWeek,
+            'week_dates' => $weekStart->format('d-m') . ' t/m ' . $weekEnd->format('d-m'),
         ]);
     }
 

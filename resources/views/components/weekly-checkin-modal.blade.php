@@ -5,7 +5,7 @@
   <div class="absolute inset-0 bg-black/50"></div>
   <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto p-6">
     <h2 class="text-lg font-bold mb-1">Wekelijkse check-in</h2>
-    <p class="text-xs text-gray-500 mb-5">Week <span id="checkin-week"></span> — Hoe gaat het met je?</p>
+    <p class="text-xs text-gray-500 mb-5">Check-in voor vorige week — Week <span id="checkin-week"></span> (<span id="checkin-week-dates"></span>)</p>
 
     <form id="checkin-form" class="flex flex-col gap-4">
       <input type="hidden" name="week_number" id="checkin-week-input">
@@ -66,6 +66,7 @@
     .then(data => {
       if (!data.show) return;
       document.getElementById('checkin-week').textContent = data.week_number;
+      document.getElementById('checkin-week-dates').textContent = data.week_dates || '';
       document.getElementById('checkin-week-input').value = data.week_number;
       overlay.classList.remove('hidden');
     })
