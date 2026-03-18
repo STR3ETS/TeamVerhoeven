@@ -39,18 +39,21 @@ class WeeklyCheckinController extends Controller
 
         // Bereken huidige trainingsweek
         $currentWeek = $this->getCurrentWeek($user, $intake);
-        if ($currentWeek < 1) {
+
+        // Check-in gaat over de VORIGE week (je reflecteert op afgelopen week)
+        $checkinWeek = $currentWeek - 1;
+        if ($checkinWeek < 1) {
             return response()->json(['show' => false]);
         }
 
-        // Check of al ingevuld voor deze week
+        // Check of al ingevuld voor vorige week
         $exists = WeeklyCheckin::where('user_id', $user->id)
-            ->where('week_number', $currentWeek)
+            ->where('week_number', $checkinWeek)
             ->exists();
 
         return response()->json([
             'show' => !$exists,
-            'week_number' => $currentWeek,
+            'week_number' => $checkinWeek,
         ]);
     }
 
