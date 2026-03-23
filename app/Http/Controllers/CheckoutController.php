@@ -464,7 +464,7 @@ class CheckoutController extends Controller
                 'quantity' => 1,
             ]],
             'billing_address_collection' => 'required',
-            'allow_promotion_codes'      => false,
+            'allow_promotion_codes'      => true,
             'metadata' => [
                 'flow'       => '2befit_intake',
                 'order_id'   => (string) $order->id,
