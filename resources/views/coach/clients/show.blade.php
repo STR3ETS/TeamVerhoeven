@@ -184,7 +184,7 @@
     if (!empty($profile?->plan_start_date)) {
     $planStart = $trainingWeekService->normalizeStartMonday($profile->plan_start_date);
     } else {
-        $latestIntake = $client->intakes()->orderByDesc('start_date')->first();
+        $latestIntake = $client->intakes()->whereNotNull('start_date')->orderBy('start_date')->first();
         if ($latestIntake && $latestIntake->start_date) {
       $planStart = $trainingWeekService->normalizeStartMonday($latestIntake->start_date);
         } else {

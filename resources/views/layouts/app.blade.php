@@ -198,6 +198,20 @@
                                 </a>
                             @endif
                         </li>
+                        <!-- <li>
+                            @if($mustIntake)
+                                <span class="p-2 rounded bg-[#a89066]/50 text-black/60 flex items-center gap-2 cursor-not-allowed pointer-events-none"
+                                      title="Rond eerst je intake af">
+                                    <i class="min-w-4 fa-solid fa-play-circle fa-xs text-black/50"></i>
+                                    <span class="font-semibold text-xs pt-0.5">Oefening uitleg</span>
+                                </span>
+                            @else
+                                <a href="{{ route('client.exercise-explainers') }}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                    <i class="min-w-4 fa-solid fa-play-circle fa-xs text-black"></i>
+                                    <span class="text-black font-semibold text-xs pt-0.5">Oefening uitleg</span>
+                                </a>
+                            @endif
+                        </li> -->
                     @endif
                     <li>
                         <a href="{{ route('logout') }}"
@@ -361,6 +375,20 @@
                                 </a>
                             @endif
                         </li>
+                        <!-- <li>
+                            @if($mustIntake)
+                                <span class="p-2 rounded bg-[#a89066]/50 text-black/60 cursor-not-allowed pointer-events-none flex items-center gap-2"
+                                      title="Rond eerst je intake af">
+                                    <i class="min-w-4 fa-solid fa-play-circle fa-xs text-black/50"></i>
+                                    <span class="font-semibold text-xs pt-0.5">Oefening uitleg</span>
+                                </span>
+                            @else
+                                <a href="{{ route('client.exercise-explainers') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
+                                    <i class="min-w-4 fa-solid fa-play-circle fa-xs text-black"></i>
+                                    <span class="text-black font-semibold text-xs pt-0.5">Oefening uitleg</span>
+                                </a>
+                            @endif
+                        </li> -->
                     @endif
                     <li>
                         <a href="{{ route('logout') }}"

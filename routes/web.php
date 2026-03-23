@@ -95,6 +95,7 @@ Route::middleware(['auth', 'intake.complete'])->group(function () {
             Route::patch('/items/{item}',        [TrainingLibraryController::class, 'updateItem'])->name('items.update');
             Route::delete('/items/{item}',       [TrainingLibraryController::class, 'destroyItem'])->name('items.destroy');
         });
+
     });
 
     Route::prefix('client')->name('client.')->middleware('role:client')->group(function () {
@@ -108,6 +109,8 @@ Route::middleware(['auth', 'intake.complete'])->group(function () {
         // Wekelijkse check-in (Elite pakket)
         Route::get('/checkin/check',  [WeeklyCheckinController::class, 'check'])->name('checkin.check');
         Route::post('/checkin',       [WeeklyCheckinController::class, 'store'])->name('checkin.store');
+
+        Route::get('/oefening-uitleg', fn () => view('client.exercise-explainers'))->name('exercise-explainers');
     });
 });
 

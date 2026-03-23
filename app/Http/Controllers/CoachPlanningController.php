@@ -48,7 +48,7 @@ class CoachPlanningController extends Controller
         // pas 'plan_start_date' aan naar jouw kolomnaam indien anders.
         $activeIntake = $client->intakes()
             ->whereNotNull('start_date')
-            ->orderByDesc('created_at')
+            ->orderBy('start_date')
             ->first();
 
         $planStartDate = $activeIntake && $activeIntake->start_date

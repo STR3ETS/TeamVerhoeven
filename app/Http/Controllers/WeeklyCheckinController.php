@@ -25,7 +25,7 @@ class WeeklyCheckinController extends Controller
         // Alleen Elite pakket
         $intake = Intake::where('client_id', $user->id)
             ->whereNotNull('start_date')
-            ->orderByDesc('created_at')
+            ->orderBy('start_date')
             ->first();
 
         if (!$intake) {
