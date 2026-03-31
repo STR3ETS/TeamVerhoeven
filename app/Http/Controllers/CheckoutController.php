@@ -7,6 +7,7 @@ use App\Models\ClientProfile;
 use App\Models\Intake;
 use App\Models\Order;
 use App\Models\ClientTodoItem;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -435,6 +436,30 @@ class CheckoutController extends Controller
             'pakket_c' => '2BeFit - Elite Hyrox Pakket (maandelijks) ' . $periodWeeks . ' weken',
         };
 
+        // Bereken einddatum: abonnement stopt automatisch na het aantal weken
+        // Bij verlenging: bereken vanaf einde huidige abonnementsperiode (niet vanaf nu)
+        $isRenewCheckout = session('subscription_renew', false);
+        if ($isRenewCheckout && $user) {
+            $profile = ClientProfile::where('user_id', $user->id)->first();
+            $existingIntake = Intake::where('client_id', $user->id)
+                ->whereNotNull('start_date')
+                ->orderByDesc('start_date')
+                ->first();
+
+            if ($profile && $existingIntake) {
+                $startDate = Carbon::parse($existingIntake->start_date);
+                $existingWeeks = (int) ($profile->period_weeks ?? 0);
+                $renewalCount = Order::where('client_id', $user->id)->where('status', 'paid')->count();
+                $gapWeeks = max(0, $renewalCount - 1);
+                // Nieuwe cancel_at = startdatum + bestaande weken + gap weken + nieuwe weken + 1 gap week voor de verlenging
+                $cancelAt = $startDate->copy()->addWeeks($existingWeeks + $gapWeeks + $periodWeeks + 1)->timestamp;
+            } else {
+                $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
+            }
+        } else {
+            $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
+        }
+
         $session = $stripe->checkout->sessions->create([
             'mode'        => 'subscription',
             'success_url' => $successUrl,
@@ -465,6 +490,9 @@ class CheckoutController extends Controller
             ]],
             'billing_address_collection' => 'required',
             'allow_promotion_codes'      => true,
+            'subscription_data' => [
+                'cancel_at' => $cancelAt,
+            ],
             'metadata' => [
                 'flow'       => '2befit_intake',
                 'order_id'   => (string) $order->id,
