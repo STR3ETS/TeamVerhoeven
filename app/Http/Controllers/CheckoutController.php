@@ -436,30 +436,6 @@ class CheckoutController extends Controller
             'pakket_c' => '2BeFit - Elite Hyrox Pakket (maandelijks) ' . $periodWeeks . ' weken',
         };
 
-        // Bereken einddatum: abonnement stopt automatisch na het aantal weken
-        // Bij verlenging: bereken vanaf einde huidige abonnementsperiode (niet vanaf nu)
-        $isRenewCheckout = session('subscription_renew', false);
-        if ($isRenewCheckout && $user) {
-            $profile = ClientProfile::where('user_id', $user->id)->first();
-            $existingIntake = Intake::where('client_id', $user->id)
-                ->whereNotNull('start_date')
-                ->orderByDesc('start_date')
-                ->first();
-
-            if ($profile && $existingIntake) {
-                $startDate = Carbon::parse($existingIntake->start_date);
-                $existingWeeks = (int) ($profile->period_weeks ?? 0);
-                $renewalCount = Order::where('client_id', $user->id)->where('status', 'paid')->count();
-                $gapWeeks = max(0, $renewalCount - 1);
-                // Nieuwe cancel_at = startdatum + bestaande weken + gap weken + nieuwe weken + 1 gap week voor de verlenging
-                $cancelAt = $startDate->copy()->addWeeks($existingWeeks + $gapWeeks + $periodWeeks + 1)->timestamp;
-            } else {
-                $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
-            }
-        } else {
-            $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
-        }
-
         $session = $stripe->checkout->sessions->create([
             'mode'        => 'subscription',
             'success_url' => $successUrl,
@@ -490,9 +466,6 @@ class CheckoutController extends Controller
             ]],
             'billing_address_collection' => 'required',
             'allow_promotion_codes'      => true,
-            'subscription_data' => [
-                'cancel_at' => $cancelAt,
-            ],
             'metadata' => [
                 'flow'       => '2befit_intake',
                 'order_id'   => (string) $order->id,
@@ -712,6 +685,47 @@ class CheckoutController extends Controller
                 'order_id'     => $order?->id,
                 'order_status' => $order?->status,
             ]);
+
+            // Stel cancel_at in op de Stripe subscription zodat deze automatisch stopt
+            try {
+                $subscriptionId = $session->subscription ?? null;
+                if ($subscriptionId) {
+                    $periodWeeks = (int) ($session->metadata['duration'] ?? 12);
+                    $wasRenewal = session('subscription_renew', false);
+
+                    if ($wasRenewal) {
+                        // Bij verlenging: cancel_at = startdatum + alle weken + gap weken
+                        $profile = ClientProfile::where('user_id', $user->id)->first();
+                        $existingIntake = Intake::where('client_id', $user->id)
+                            ->whereNotNull('start_date')
+                            ->orderByDesc('start_date')
+                            ->first();
+
+                        if ($profile && $existingIntake) {
+                            $startDate = Carbon::parse($existingIntake->start_date);
+                            $totalWeeks = (int) ($profile->period_weeks ?? $periodWeeks);
+                            $renewalCount = Order::where('client_id', $user->id)->where('status', 'paid')->count();
+                            $gapWeeks = max(0, $renewalCount - 1);
+                            $cancelAt = $startDate->copy()->addWeeks($totalWeeks + $gapWeeks)->timestamp;
+                        } else {
+                            $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
+                        }
+                    } else {
+                        $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
+                    }
+
+                    $stripe->subscriptions->update($subscriptionId, [
+                        'cancel_at' => $cancelAt,
+                    ]);
+                    Log::info('[checkout.confirm] subscription cancel_at set', [
+                        'subscription_id' => $subscriptionId,
+                        'cancel_at' => date('Y-m-d', $cancelAt),
+                        'is_renewal' => $wasRenewal,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('[checkout.confirm] failed to set cancel_at', ['error' => $e->getMessage()]);
+            }
 
             // Reset subscription renew flag na succesvolle betaling
             session()->forget('subscription_renew');
