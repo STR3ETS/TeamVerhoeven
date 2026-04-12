@@ -125,117 +125,19 @@ class SubscriptionExpiryController extends Controller
             return response()->json(['success' => false, 'message' => 'Niet ingelogd als client'], 403);
         }
 
-        $profile = ClientProfile::where('user_id', $user->id)->first();
-        if (!$profile) {
-            return response()->json(['success' => false, 'message' => 'Profiel niet gevonden'], 404);
-        }
+        // Alleen session flags zetten - alle destructieve acties (Stripe annuleren,
+        // profiel resetten, renewal registreren) gebeuren pas NA succesvolle betaling
+        // in CheckoutController. Dit voorkomt dat data verloren gaat als de klant
+        // de betaling afbreekt.
+        session(['subscription_popup_shown' => true]);
+        session(['subscription_renew' => true]);
 
-        try {
-            DB::transaction(function () use ($user, $profile) {
-                // 1. Annuleer Stripe subscription (aan einde van huidige periode)
-                $this->cancelStripeSubscription($user->id, false);
+        Log::info('[subscription.renew] renewal flow started (no DB changes until payment)', ['user_id' => $user->id]);
 
-                // 2. Training assignments worden NIET gereset bij renewal
-                // De coach behoudt het bestaande trainingschema
-                Log::info('[subscription.renew] training assignments preserved', ['user_id' => $user->id]);
-
-                // 3. Behoud: user_id, coach_id, birthdate, gender, address, phone_e164, coach_preference, period_weeks
-                // Reset alle andere intake-gerelateerde velden
-                // BELANGRIJK: period_weeks wordt NIET gereset - dit wordt later opgeteld in CheckoutController
-                $profile->height_cm = null;
-                $profile->weight_kg = null;
-                $profile->goals = null;
-                $profile->injuries = null;
-                // period_weeks wordt NIET gereset - wordt opgeteld bij renewal in CheckoutController
-                $profile->frequency = null;
-                $profile->background = null;
-                $profile->facilities = null;
-                $profile->materials = null;
-                $profile->work_hours = null;
-                $profile->heartrate = null;
-                $profile->test_12min = null;
-                $profile->test_5k = null;
-                $profile->test_10k = null;
-                $profile->test_marathon = null;
-                $profile->goal = null;
-                $profile->ftp = null;
-                $profile->save();
-
-                Log::info('[subscription.renew] profile reset (period_weeks preserved)', ['user_id' => $user->id, 'period_weeks' => $profile->period_weeks]);
-
-                // 4. Update bestaande Intake row (niet nieuwe maken)
-                // We resetten alleen de velden die opnieuw ingevuld moeten worden
-                $intake = Intake::where('client_id', $user->id)
-                    ->orderByDesc('id')
-                    ->first();
-
-                if ($intake) {
-                    // Behoud contact gegevens (naam, email, telefoon, adres, coach voorkeur)
-                    // Reset de rest van de payload
-                    $existingPayload = $intake->payload ?? [];
-                    $contact = $existingPayload['contact'] ?? [];
-                    
-                    // Behoud alleen persoonlijke gegevens en coach voorkeur
-                    $newPayload = [
-                        'contact' => [
-                            'name' => $contact['name'] ?? null,
-                            'email' => $contact['email'] ?? null,
-                            'phone' => $contact['phone'] ?? null,
-                            'dob' => $contact['dob'] ?? null,
-                            'gender' => $contact['gender'] ?? null,
-                            'street' => $contact['street'] ?? null,
-                            'house_number' => $contact['house_number'] ?? null,
-                            'postcode' => $contact['postcode'] ?? null,
-                            'preferred_coach' => $contact['preferred_coach'] ?? null,
-                            'coach_id' => $contact['coach_id'] ?? null,
-                        ],
-                        // Reset deze velden - worden opnieuw ingevuld
-                        'package' => null,
-                        'duration_weeks' => null,
-                        'profile' => [],
-                        'goal' => [],
-                    ];
-
-                    $intake->payload = $newPayload;
-                    // BELANGRIJK: start_date wordt NIET gereset bij renewal
-                    // De originele startdatum blijft behouden voor de weken-optelling berekening
-                    $intake->status = 'active';
-                    $intake->completed_at = null;
-                    $intake->save();
-
-                    Log::info('[subscription.renew] intake reset (start_date preserved)', ['intake_id' => $intake->id, 'start_date' => $intake->start_date]);
-                }
-
-                // 5. Registreer deze verlenging in subscription_renewals tabel
-                // Dit wordt gebruikt voor het "Verlenging" label in het coach dashboard
-                SubscriptionRenewal::recordRenewal($user->id);
-                Log::info('[subscription.renew] renewal recorded', ['user_id' => $user->id]);
-            });
-
-            // Markeer popup als getoond
-            session(['subscription_popup_shown' => true]);
-            
-            // Markeer dit als een renew flow zodat CheckoutController weet
-            // dat bestaande intake geüpdatet moet worden
-            session(['subscription_renew' => true]);
-
-            // Redirect naar intake step 2 (pakket keuze)
-            return response()->json([
-                'success' => true,
-                'redirect' => route('intake.index', ['step' => 2, 'renew' => 1]),
-            ]);
-
-        } catch (\Throwable $e) {
-            Log::error('[subscription.renew] error', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Er is een fout opgetreden bij het verlengen.',
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'redirect' => route('intake.index', ['step' => 2, 'renew' => 1]),
+        ]);
     }
 
     /**

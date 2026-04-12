@@ -16,13 +16,13 @@ class SubscriptionStatusService
      * - 'status': 'active' | 'expiring_soon' | 'expired' | 'should_delete'
      * - 'ends_at': Carbon date when subscription ends
      * - 'days_remaining': int days until expiry (can be negative if expired)
-     * - 'delete_at': Carbon date when account will be deleted (1 day after expiry)
+     * - 'delete_at': Carbon date when account will be deleted (7 days after expiry)
      * - 'period_weeks': int the subscription period
-     * 
+     *
      * Timeline:
      * - 7 days before ends_at: expiring_soon (non-blocking popup)
-     * - On ends_at and 1 day after: expired (blocking popup)
-     * - After 1 day past ends_at: should_delete (auto delete)
+     * - On ends_at and 7 days after: expired (blocking popup)
+     * - After 7 days past ends_at: should_delete (auto delete)
      */
     public static function getStatus(User $user): ?array
     {
@@ -55,7 +55,7 @@ class SubscriptionStatusService
         $gapWeeks = max(0, $renewalCount - 1);
 
         $endsAt = $startDate->copy()->addWeeks($periodWeeks + $gapWeeks)->endOfDay(); // End of the last day
-        $deleteAt = $endsAt->copy()->addDay()->endOfDay(); // 1 day after expiry (end of that day)
+        $deleteAt = $endsAt->copy()->addDays(7)->endOfDay(); // 7 days after expiry (end of that day)
         $now = Carbon::now();
         
         // Calculate days remaining (negative if past)
@@ -67,7 +67,7 @@ class SubscriptionStatusService
         // Determine status based on new rules:
         // - expiring_soon: 7 days before ends_at until ends_at (non-blocking popup)
         // - expired: on ends_at day and 1 day after (blocking popup)
-        // - should_delete: more than 1 day after ends_at (auto delete)
+        // - should_delete: more than 7 days after ends_at (auto delete)
         
         if ($now->gt($deleteAt)) {
             $status = 'should_delete';

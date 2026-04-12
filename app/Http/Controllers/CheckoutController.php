@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\NewIntakeNotification;
 use App\Mail\ClientWelcomeMail;
 use App\Mail\ClientRenewalNotification;
+use App\Models\SubscriptionRenewal;
 
 class CheckoutController extends Controller
 {
@@ -412,6 +413,14 @@ class CheckoutController extends Controller
                 Log::warning('[checkout.create] mailchimp schedule failed', ['e' => $e->getMessage()]);
             }
 
+            // Bij renewal: annuleer oude Stripe subscription + registreer verlenging
+            // Dit gebeurt pas NA succesvolle betaling (niet eerder)
+            if ($wasRenewal) {
+                $this->cancelOldStripeSubscription($user->id);
+                SubscriptionRenewal::recordRenewal($user->id);
+                Log::info('[checkout.create] FAKE renewal: old subscription canceled + renewal recorded', ['user_id' => $user->id]);
+            }
+
             // Opruimen
             if ($forceFake) {
                 session()->forget('ak'); // key niet hergebruiken binnen dezelfde sessie
@@ -725,6 +734,14 @@ class CheckoutController extends Controller
                 }
             } catch (\Throwable $e) {
                 Log::warning('[checkout.confirm] failed to set cancel_at', ['error' => $e->getMessage()]);
+            }
+
+            // Bij renewal: annuleer oude Stripe subscription + registreer verlenging
+            // Dit gebeurt pas NA succesvolle betaling (niet eerder)
+            if ($wasRenewal) {
+                $this->cancelOldStripeSubscription($user->id);
+                SubscriptionRenewal::recordRenewal($user->id);
+                Log::info('[checkout.confirm] renewal: old subscription canceled + renewal recorded', ['user_id' => $user->id]);
             }
 
             // Reset subscription renew flag na succesvolle betaling
@@ -1332,6 +1349,80 @@ class CheckoutController extends Controller
                 'user_id' => $user->id,
                 'email'   => $user->email,
                 'error'   => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Annuleer de oude Stripe subscription voor een gebruiker (aan einde van huidige periode).
+     * Wordt aangeroepen NA succesvolle betaling bij een renewal.
+     */
+    private function cancelOldStripeSubscription(int $userId): void
+    {
+        try {
+            // Zoek de op-één-na-laatste betaalde order (de OUDE subscription, niet de zojuist betaalde)
+            $orders = Order::where('client_id', $userId)
+                ->where('status', 'paid')
+                ->whereNotNull('provider_ref')
+                ->orderByDesc('id')
+                ->take(2)
+                ->get();
+
+            // De eerste is de nieuwe, de tweede is de oude die geannuleerd moet worden
+            $oldOrder = $orders->count() >= 2 ? $orders->last() : null;
+
+            if (!$oldOrder || !$oldOrder->provider_ref) {
+                Log::info('[stripe.cancel-old] no old order found', ['user_id' => $userId]);
+                return;
+            }
+
+            $providerRef = $oldOrder->provider_ref;
+
+            // Skip fake/access key orders
+            if (str_starts_with($providerRef, 'access_key_') || str_starts_with($providerRef, 'fake_')) {
+                Log::info('[stripe.cancel-old] skipping fake/access_key order', [
+                    'user_id' => $userId,
+                    'provider_ref' => $providerRef,
+                ]);
+                return;
+            }
+
+            $stripe = new StripeClient(config('services.stripe.secret'));
+
+            try {
+                $session = $stripe->checkout->sessions->retrieve($providerRef);
+                $subscriptionId = $session->subscription ?? null;
+
+                if (!$subscriptionId) {
+                    Log::info('[stripe.cancel-old] no subscription in session', [
+                        'user_id' => $userId,
+                        'session_id' => $providerRef,
+                    ]);
+                    return;
+                }
+
+                $stripe->subscriptions->update($subscriptionId, [
+                    'cancel_at_period_end' => true,
+                ]);
+
+                $oldOrder->status = 'canceled';
+                $oldOrder->save();
+
+                Log::info('[stripe.cancel-old] old subscription set to cancel at period end', [
+                    'user_id' => $userId,
+                    'subscription_id' => $subscriptionId,
+                ]);
+            } catch (\Stripe\Exception\InvalidRequestException $e) {
+                Log::info('[stripe.cancel-old] session not found or expired', [
+                    'user_id' => $userId,
+                    'provider_ref' => $providerRef,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[stripe.cancel-old] error', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
             ]);
         }
     }
