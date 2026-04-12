@@ -3,7 +3,7 @@
 {{-- VERLOPEN POPUP: Niet wegklikbaar, met verlengen/verwijderen knoppen --}}
 {{-- NIET TONEN: Als gebruiker al bezig is met verlengen (op intake pagina met renew=1) --}}
 @auth
-@if(auth()->user()->role === 'client' && !session('subscription_renew', false))
+@if(auth()->user()->role === 'client' && !(session('subscription_renew', false) && request()->is('intake*')))
 <div x-data="subscriptionExpiryPopup()" x-init="checkExpiry()" x-cloak>
     {{-- Overlay --}}
     <div x-show="showPopup" 

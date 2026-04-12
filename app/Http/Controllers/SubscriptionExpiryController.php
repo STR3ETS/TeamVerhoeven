@@ -40,10 +40,16 @@ class SubscriptionExpiryController extends Controller
             return response()->json(['show_popup' => false]);
         }
 
-        // BELANGRIJK: Als de gebruiker al bezig is met verlengen, toon de popup NIET
-        // Dit voorkomt dat de popup verschijnt op de intake pagina tijdens het renewal proces
-        if (session('subscription_renew', false)) {
+        // Als de gebruiker bezig is met verlengen EN op de intake pagina zit, toon de popup NIET
+        // Op andere pagina's moet de popup WEL verschijnen zodat de klant niet om de popup heen kan navigeren
+        $onIntakePage = str_contains($request->header('Referer', ''), '/intake');
+        if (session('subscription_renew', false) && $onIntakePage) {
             return response()->json(['show_popup' => false]);
+        }
+
+        // Als de klant is weggenavigeerd van de intake zonder te betalen, reset de renew flag
+        if (session('subscription_renew', false) && !$onIntakePage) {
+            session()->forget('subscription_renew');
         }
 
         $profile = ClientProfile::where('user_id', $user->id)->first();
