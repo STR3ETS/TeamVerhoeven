@@ -683,6 +683,27 @@
               </div>
             </div>
           </div>
+
+          <!-- Trainingsniveau -->
+          <div>
+            <p class="text-sm font-medium text-black mb-1">Wat is je trainingsniveau?</p>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <template x-for="opt in [{v:'beginner',l:'Beginner',d:'Ik begin net of ben herstellend'},{v:'gevorderd',l:'Gevorderd',d:'Ik train al regelmatig'},{v:'expert',l:'Expert',d:'Ik train intensief en heb veel ervaring'}]" :key="opt.v">
+                <label
+                  class="flex-1 cursor-pointer rounded-xl border-2 p-3 transition duration-300 text-center"
+                  :class="form.training_level === opt.v
+                    ? 'border-[#c8ab7a] bg-[#c8ab7a]/10'
+                    : (errors.training_level ? 'border-red-300' : 'border-gray-200 hover:border-gray-300')"
+                  @click="form.training_level = opt.v; delete errors.training_level"
+                >
+                  <input type="radio" name="training_level" :value="opt.v" x-model="form.training_level" class="sr-only">
+                  <span class="block text-sm font-semibold" x-text="opt.l"></span>
+                  <span class="block text-xs text-black/50 mt-0.5" x-text="opt.d"></span>
+                </label>
+              </template>
+            </div>
+            <p x-show="errors.training_level" x-text="errors.training_level" class="text-red-500 text-xs mt-1"></p>
+          </div>
         </div>
 
         <div class="flex items-center justify-between gap-2">
@@ -1113,7 +1134,7 @@
         package:'', duration:null, // bij key vullen we deze vooraf
         // overige
         height_cm:null, weight_kg:null, injuries:'', goals:'',
-        max_days_per_week:null, session_minutes:null,
+        max_days_per_week:null, session_minutes:null, training_level:'',
         sport_background:'', facilities:'', materials:'', working_hours:'',
         goal_distance:'', goal_time_hms:'', goal_ref_date:'',
         cooper_meters:null, test_5k_pace:'', test_10k_pace:'', marathon_pace:'',
@@ -1452,6 +1473,7 @@
         if (stepIndex===6){
           if (this.form.max_days_per_week==null || isNaN(this.form.max_days_per_week) || this.form.max_days_per_week<1 || this.form.max_days_per_week>7) this.errors.max_days_per_week='Kies 1–7.';
           if (this.form.session_minutes==null || isNaN(this.form.session_minutes) || this.form.session_minutes<20 || this.form.session_minutes>180) this.errors.session_minutes='Kies 20–180 min.';
+          if (!['beginner','gevorderd','expert'].includes(this.form.training_level)) this.errors.training_level='Kies je trainingsniveau.';
         }
         if (stepIndex===7){ if ((this.form.sport_background||'').length>500) this.errors.sport_background='Maximaal 500 tekens.'; }
         if (stepIndex===8){ if ((this.form.facilities||'').length>500) this.errors.facilities='Maximaal 500 tekens.'; }
@@ -1555,7 +1577,7 @@
           duration: this.hasKey ? ak.duration : this.form.duration,
           height_cm:this.form.height_cm, weight_kg:this.form.weight_kg,
           injuries:this.form.injuries, goals:this.form.goals,
-          max_days_per_week:this.form.max_days_per_week, session_minutes:this.form.session_minutes,
+          max_days_per_week:this.form.max_days_per_week, session_minutes:this.form.session_minutes, training_level:this.form.training_level,
           sport_background:this.form.sport_background, facilities:this.form.facilities,
           materials:this.form.materials, working_hours:this.form.working_hours,
           goal_distance:this.form.goal_distance, goal_time_hms:this.form.goal_time_hms, goal_ref_date:this.form.goal_ref_date,
@@ -1637,7 +1659,7 @@
         if (stepIndex===3){ p.height_cm=this.form.height_cm; p.weight_kg=this.form.weight_kg; }
         if (stepIndex===4){ p.injuries=this.form.injuries; }
         if (stepIndex===5){ p.goals=this.form.goals; }
-        if (stepIndex===6){ p.max_days_per_week=this.form.max_days_per_week; p.session_minutes=this.form.session_minutes; }
+        if (stepIndex===6){ p.max_days_per_week=this.form.max_days_per_week; p.session_minutes=this.form.session_minutes; p.training_level=this.form.training_level; }
         if (stepIndex===7){ p.sport_background=this.form.sport_background; }
         if (stepIndex===8){ p.facilities=this.form.facilities; }
         if (stepIndex===9){ p.materials=this.form.materials; }

@@ -31,14 +31,16 @@ class TrainingTemplateService
             return false;
         }
 
+        $level = $intakePayload['profile']['training_level'] ?? 'beginner';
         $injuries = $intakePayload['profile']['injuries'] ?? null;
         $maxDays = (int) ($intakePayload['profile']['max_days_per_week'] ?? 5);
 
-        $template = TrainingPlanTemplate::findBestMatch($injuries, $maxDays);
+        $template = TrainingPlanTemplate::findBestMatch($level, $injuries, $maxDays);
 
         if (!$template) {
             Log::warning('[training.template] no template found', [
                 'user_id' => $user->id,
+                'level' => $level,
                 'injuries' => $injuries,
                 'max_days' => $maxDays,
             ]);

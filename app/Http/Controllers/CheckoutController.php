@@ -67,6 +67,7 @@ class CheckoutController extends Controller
             // overige (optioneel)
             'height_cm'          => 'nullable|numeric|min:120|max:250',
             'weight_kg'          => 'nullable|numeric|min:35|max:250',
+            'training_level'     => 'nullable|in:beginner,gevorderd,expert',
             'injuries'           => 'nullable|string|max:500',
             'goals'              => 'nullable|string|max:500',
             'max_days_per_week'  => 'nullable|integer|min:1|max:7',
@@ -158,6 +159,7 @@ class CheckoutController extends Controller
             'profile'  => [
                 'height_cm'         => $data['height_cm'] ?? null,
                 'weight_kg'         => $data['weight_kg'] ?? null,
+                'training_level'    => $data['training_level'] ?? 'beginner',
                 'injuries'          => $data['injuries'] ?? null,
                 'goals'             => $data['goals'] ?? null,
                 'max_days_per_week' => $data['max_days_per_week'] ?? null,
