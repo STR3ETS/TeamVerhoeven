@@ -198,7 +198,7 @@
                                 </a>
                             @endif
                         </li>
-                        <!-- <li>
+                        <li>
                             @if($mustIntake)
                                 <span class="p-2 rounded bg-[#a89066]/50 text-black/60 flex items-center gap-2 cursor-not-allowed pointer-events-none"
                                       title="Rond eerst je intake af">
@@ -211,7 +211,7 @@
                                     <span class="text-black font-semibold text-xs pt-0.5">Oefening uitleg</span>
                                 </a>
                             @endif
-                        </li> -->
+                        </li>
                     @endif
                     <li>
                         <a href="{{ route('logout') }}"
@@ -375,7 +375,7 @@
                                 </a>
                             @endif
                         </li>
-                        <!-- <li>
+                        <li>
                             @if($mustIntake)
                                 <span class="p-2 rounded bg-[#a89066]/50 text-black/60 cursor-not-allowed pointer-events-none flex items-center gap-2"
                                       title="Rond eerst je intake af">
@@ -388,7 +388,7 @@
                                     <span class="text-black font-semibold text-xs pt-0.5">Oefening uitleg</span>
                                 </a>
                             @endif
-                        </li> -->
+                        </li>
                     @endif
                     <li>
                         <a href="{{ route('logout') }}"

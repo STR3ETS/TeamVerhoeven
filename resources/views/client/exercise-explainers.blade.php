@@ -2,94 +2,143 @@
 @section('title', 'Oefening uitleg')
 
 @section('content')
-<h1 class="text-2xl font-bold mb-2">Oefening uitleg</h1>
-<p class="text-sm text-black opacity-80 font-medium mb-10">Bekijk hier uitlegvideo's van oefeningen uit jouw trainingsschema.<br>Zo weet je altijd hoe je een oefening correct uitvoert.</p>
+<div x-data="{
+    search: '',
+    videos: [
+        { file: 'HYX_9090_HipTransition_V1.mp4', name: '90/90 Hip Transition' },
+        { file: 'HYX_BarbellDeadlift_V1.mp4', name: 'Barbell Deadlift' },
+        { file: 'HYX_BoxJump_V1.mp4', name: 'Box Jump' },
+        { file: 'HYX_BurpeeBroadJumpV1.mp4', name: 'Burpee Broad Jump' },
+        { file: 'HYX_DevilPress_V1.mp4', name: 'Devil Press' },
+        { file: 'HYX_DumbellPushPress_V1.mp4', name: 'Dumbbell Push Press' },
+        { file: 'HYX_DumbellSnatch_V1.mp4', name: 'Dumbbell Snatch' },
+        { file: 'HYX_DumbellThrusters_V1.mp4', name: 'Dumbbell Thrusters' },
+        { file: 'HYX_FarmerCarry_V1.mp4', name: 'Farmer Carry' },
+        { file: 'HYX_FrontRacksquat_V1.mp4', name: 'Front Rack Squat' },
+        { file: 'HYX_HandReleasePushUps_V1.mp4', name: 'Hand Release Push-Ups' },
+        { file: 'HYX_HorizontalJump_V1.mp4', name: 'Horizontal Jump' },
+        { file: 'HYX_KettlebellSwings_V1.mp4', name: 'Kettlebell Swings' },
+        { file: 'HYX_PullUps_V1.mp4', name: 'Pull-Ups' },
+        { file: 'HYX_RowErg_V1.mp4', name: 'Row Erg' },
+        { file: 'HYX_SandbagLunges_V1.mp4', name: 'Sandbag Lunges' },
+        { file: 'HYX_SkiErg_V1.mp4', name: 'Ski Erg' },
+        { file: 'HYX_SledBackwardDrag_V1.mp4', name: 'Sled Backward Drag' },
+        { file: 'HYX_SledPull_V1.mp4', name: 'Sled Pull' },
+        { file: 'HYX_SledPush_V1.mp4', name: 'Sled Push' },
+        { file: 'HYX_StepUps_V1.mp4', name: 'Step-Ups' },
+        { file: 'HYX_VerticalJumpSquat_V1.mp4', name: 'Vertical Jump Squat' },
+        { file: 'HYX_WalkingLunges_V1.mp4', name: 'Walking Lunges' },
+        { file: 'HYX_WallBalls_V1.mp4', name: 'Wall Balls' },
+        { file: 'HYX_WorldGreatestStretch_V1.mp4', name: 'World\'s Greatest Stretch' },
+    ],
+    modal: null,
+    openModal(video) {
+        this.modal = video;
+        this.$nextTick(() => {
+            const v = document.getElementById('modal-video');
+            if (v) v.play();
+        });
+    },
+    closeModal() {
+        const v = document.getElementById('modal-video');
+        if (v) v.pause();
+        this.modal = null;
+    },
+    get filtered() {
+        if (!this.search.trim()) return this.videos;
+        const q = this.search.toLowerCase();
+        return this.videos.filter(v => v.name.toLowerCase().includes(q));
+    }
+}" @keydown.escape.window="closeModal()">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold mb-1">Oefening uitleg</h1>
+        <p class="text-sm text-black/60 font-medium">Bekijk hier uitlegvideo's van oefeningen uit jouw trainingsschema.</p>
+    </div>
 
-<div class="grid grid-cols-2 gap-4">
-    <div class="p-5 bg-white rounded-3xl border border-gray-300 flex gap-4">
-        <div class="min-w-[200px] max-w-[200px] relative cursor-pointer group" x-data="{ playing: false }"
-             @click="const v = $refs.vid; if (v.paused) { v.play(); playing = true; } else { v.pause(); playing = false; }">
-            <video class="rounded-2xl w-full" x-ref="vid"
-                   @ended="playing = false"
-                   src="/assets/videos/videotheek/HYX_9090_HipTransition_V1.mp4"></video>
-            <div class="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
-                 :class="playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'">
-                <div class="w-14 h-14 rounded-full bg-black/50 flex items-center justify-center">
-                    <i class="fa-solid text-white text-lg" :class="playing ? 'fa-pause' : 'fa-play ml-1'"></i>
-                </div>
-            </div>
-        </div>
-        <div class="flex flex-col">
-            <p class="text-lg font-bold mb-2">90/90 Hip Transition (Variant 1)</p>
-            <p class="font-medium text-sm">Plaats de voeten 30-40 cm uit elkaar.</p>
-            <p class="font-medium text-sm mt-2">Houd beide voeten op dezelfde plek en maak een transitie van links naar rechts vanuit de heup.</p>
-            <p class="font-medium text-sm mt-2">Bij variant 2 ga je door vanuit de extensie en duw je vanuit je heup jezelf compleet omhoog.</p>
-            <p class="font-semibold text-sm flex-1 flex items-end text-[#c8ab7a]">Uitleg door Nicky & Roy</p>
-        </div>
+    {{-- Zoekbalk --}}
+    <div class="mb-6 relative">
+        <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-black/30 text-sm"></i>
+        <input type="text" x-model="search" placeholder="Zoek een oefening..."
+               class="w-full sm:w-80 pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium placeholder-black/30 focus:outline-none focus:ring-2 focus:ring-[#c8ab7a]/50 focus:border-[#c8ab7a] transition">
     </div>
-    <div class="p-5 bg-white rounded-3xl border border-gray-300 flex gap-4">
-        <div class="min-w-[200px] max-w-[200px] relative cursor-pointer group" x-data="{ playing: false }"
-             @click="const v = $refs.vid; if (v.paused) { v.play(); playing = true; } else { v.pause(); playing = false; }">
-            <video class="rounded-2xl w-full" x-ref="vid"
-                   @ended="playing = false"
-                   src="/assets/videos/videotheek/HYX_BarbellDeadlift_V1.mp4"></video>
-            <div class="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
-                 :class="playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'">
-                <div class="w-14 h-14 rounded-full bg-black/50 flex items-center justify-center">
-                    <i class="fa-solid text-white text-lg" :class="playing ? 'fa-pause' : 'fa-play ml-1'"></i>
-                </div>
-            </div>
-        </div>
-        <div class="flex flex-col">
-            <p class="text-lg font-bold mb-2">Barbell Deadlift</p>
-            <p class="font-medium text-sm">Plaats je voeten parallel naast elkaar.</p>
-            <p class="font-medium text-sm mt-2">Plaats je handen op de barbell op heup lengte en zorg dat je je rug recht houdt.</p>
-            <p class="font-medium text-sm mt-2">Trek de barbell vanuit de bilspier en de hamstring recht omhoog.</p>
-            <p class="font-medium text-sm mt-2">Zorg dat je de stang over de schenen laadt glijden.</p>
-            <p class="font-medium text-sm mt-2">Strek de heup tot volledige extensie.</p>
-            <p class="font-medium text-sm mt-2">Houd 3 seconden zakken en 3 seconden strekken aan.</p>
-            <p class="font-semibold text-sm flex-1 flex items-end text-[#c8ab7a]">Uitleg door Nicky & Roy</p>
-        </div>
+
+    {{-- Geen resultaten --}}
+    <div x-show="filtered.length === 0" x-cloak class="text-center py-16">
+        <i class="fa-solid fa-video-slash text-3xl text-black/20 mb-3"></i>
+        <p class="text-sm text-black/40 font-medium">Geen oefeningen gevonden voor "<span x-text="search"></span>"</p>
     </div>
-    <div class="p-5 bg-white rounded-3xl border border-gray-300 flex gap-4">
-        <div class="min-w-[200px] max-w-[200px] relative cursor-pointer group" x-data="{ playing: false }"
-             @click="const v = $refs.vid; if (v.paused) { v.play(); playing = true; } else { v.pause(); playing = false; }">
-            <video class="rounded-2xl w-full" x-ref="vid"
-                   @ended="playing = false"
-                   src="/assets/videos/videotheek/HYX_BoxJump_V1.mp4"></video>
-            <div class="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
-                 :class="playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'">
-                <div class="w-14 h-14 rounded-full bg-black/50 flex items-center justify-center">
-                    <i class="fa-solid text-white text-lg" :class="playing ? 'fa-pause' : 'fa-play ml-1'"></i>
+
+    {{-- Video grid --}}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <template x-for="video in filtered" :key="video.file">
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
+                 x-data="{ playing: false }">
+                {{-- Video --}}
+                <div class="relative cursor-pointer group aspect-[9/16] bg-black/5"
+                     @click="
+                        const v = $el.querySelector('video');
+                        if (v.paused) { v.play(); playing = true; }
+                        else { v.pause(); playing = false; }
+                     ">
+                    <video class="w-full h-full object-cover"
+                           :src="'/assets/videos/uitleg/' + video.file"
+                           preload="metadata"
+                           playsinline
+                           @ended="playing = false"></video>
+                    <div class="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
+                         :class="playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'">
+                        <div class="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                            <i class="fa-solid text-white text-base" :class="playing ? 'fa-pause' : 'fa-play ml-0.5'"></i>
+                        </div>
+                    </div>
+                    <button class="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                            @click.stop="const v = $el.closest('.group').querySelector('video'); v.pause(); playing = false; openModal(video)"
+                            title="Fullscreen">
+                        <i class="fa-solid fa-expand text-white text-xs"></i>
+                    </button>
+                </div>
+                {{-- Titel --}}
+                <div class="px-4 py-3">
+                    <p class="font-semibold text-sm" x-text="video.name"></p>
                 </div>
             </div>
-        </div>
-        <div class="flex flex-col">
-            <p class="text-lg font-bold mb-2">Box Jump</p>
-            <p class="font-medium text-sm">Vanuit een squat positie spring je 2 benen tegelijk op de box en laat je je armen mee zwaaien.</p>
-            <p class="font-medium text-sm mt-2">Bij deze oefening is het belangrijk dat je 2 benen op de box volledig uitstrekken en gecontroleerd weer met 1 been van de box afstapt.</p>
-            <p class="font-semibold text-sm flex-1 flex items-end text-[#c8ab7a]">Uitleg door Eline</p>
-        </div>
+        </template>
     </div>
-    <div class="p-5 bg-white rounded-3xl border border-gray-300 flex gap-4">
-        <div class="min-w-[200px] max-w-[200px] relative cursor-pointer group" x-data="{ playing: false }"
-             @click="const v = $refs.vid; if (v.paused) { v.play(); playing = true; } else { v.pause(); playing = false; }">
-            <video class="rounded-2xl w-full" x-ref="vid"
-                   @ended="playing = false"
-                   src="/assets/videos/videotheek/HYX_BurpeeBroadJumpV1.mp4"></video>
-            <div class="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
-                 :class="playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'">
-                <div class="w-14 h-14 rounded-full bg-black/50 flex items-center justify-center">
-                    <i class="fa-solid text-white text-lg" :class="playing ? 'fa-pause' : 'fa-play ml-1'"></i>
-                </div>
-            </div>
+
+    {{-- Aantal oefeningen --}}
+    <p class="text-xs text-black/30 font-medium mt-6 text-center" x-text="filtered.length + ' oefening' + (filtered.length !== 1 ? 'en' : '')"></p>
+
+    {{-- Fullscreen modal --}}
+    <div x-show="modal" x-cloak
+         class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-4"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        {{-- Sluit knop boven --}}
+        <button class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition z-10"
+                @click="closeModal()">
+            <i class="fa-solid fa-xmark text-white text-lg"></i>
+        </button>
+        {{-- Titel --}}
+        <p class="text-white text-sm font-semibold mb-3 text-center" x-text="modal ? modal.name : ''"></p>
+        {{-- Video --}}
+        <div class="flex-1 min-h-0 w-full flex items-center justify-center">
+            <video x-show="modal" id="modal-video"
+                   class="max-h-full max-w-full rounded-lg"
+                   style="aspect-ratio: 9/16;"
+                   :src="modal ? '/assets/videos/uitleg/' + modal.file : ''"
+                   controls
+                   playsinline
+                   @ended="closeModal()"></video>
         </div>
-        <div class="flex flex-col">
-            <p class="text-lg font-bold mb-2">Burpee Broad Jump</p>
-            <p class="font-medium text-sm">Je bent met de borst naar de grond.</p>
-            <p class="font-medium text-sm mt-2">Je kunt 1 been bijstappen, plaats 1 voet tegelijk terug</p>
-            <p class="font-semibold text-sm flex-1 flex items-end text-[#c8ab7a]">Uitleg door Eline</p>
-        </div>
+        {{-- Sluiten knop onder --}}
+        <button class="mt-3 px-5 py-2 rounded-full bg-white/20 backdrop-blur-sm text-white text-sm font-medium hover:bg-white/30 transition"
+                @click="closeModal()">
+            Sluiten
+        </button>
     </div>
 </div>
 @endsection
