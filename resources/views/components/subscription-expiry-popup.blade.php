@@ -232,7 +232,7 @@ function subscriptionExpiryPopup() {
 
         async renewSubscription() {
             this.loading = 'renew';
-            
+
             try {
                 const response = await fetch('{{ route("subscription.renew") }}', {
                     method: 'POST',
@@ -243,9 +243,14 @@ function subscriptionExpiryPopup() {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                
+
+                if (response.status === 419) {
+                    window.location.reload();
+                    return;
+                }
+
                 const data = await response.json();
-                
+
                 if (data.success && data.redirect) {
                     window.location.href = data.redirect;
                 } else {
@@ -265,7 +270,7 @@ function subscriptionExpiryPopup() {
 
         async deleteAccount() {
             this.loading = 'delete';
-            
+
             try {
                 const response = await fetch('{{ route("subscription.delete") }}', {
                     method: 'POST',
@@ -276,9 +281,14 @@ function subscriptionExpiryPopup() {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                
+
+                if (response.status === 419) {
+                    window.location.reload();
+                    return;
+                }
+
                 const data = await response.json();
-                
+
                 if (data.success && data.redirect) {
                     window.location.href = data.redirect;
                 } else {
