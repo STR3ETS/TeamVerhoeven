@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\TrainingAssignment;
+use App\Models\TrainingPlanTemplate;
 use App\Models\TrainingSection;
 use App\Services\TrainingWeekService;
 use Illuminate\Http\Request;
@@ -59,15 +60,33 @@ class CoachPlanningController extends Controller
         $periodSegments = $trainingWeekService->periodSegmentsForUser($client);
         $currentWeekHeader = $trainingWeekService->formatWeekHeader($planStartDate, $week, $periodSegments);
 
+        // Templates voor handmatig inladen
+        $templates = TrainingPlanTemplate::orderBy('level')->orderBy('max_days')->get();
+
+        // Best-match bepalen op basis van intake data
+        $latestIntake = $client->intakes()->whereNotNull('completed_at')->orderByDesc('id')->first();
+        $intakePayload = $latestIntake?->payload ?? [];
+        $profile = $client->clientProfile;
+
+        $level    = $intakePayload['profile']['training_level'] ?? 'beginner';
+        $injuries = $intakePayload['profile']['injuries'] ?? ($profile?->injuries ? implode(', ', (array) $profile->injuries) : null);
+        $maxDays  = (int) ($intakePayload['profile']['max_days_per_week'] ?? ($profile?->frequency['sessions_per_week'] ?? 5));
+
+        $bestMatch = TrainingPlanTemplate::findBestMatch($level, $injuries, $maxDays);
+        $hasAssignments = TrainingAssignment::where('user_id', $client->id)->exists();
+
         return view('coach.planning.create', [
-            'client'        => $client,
-            'sections'      => $sections,
-            'assignments'   => $assignments,
-            'week'          => $week,
-            'totalWeeks'    => $totalWeeks,
-            'planStartDate' => $planStartDate,
-            'periodSegments' => $periodSegments,
+            'client'            => $client,
+            'sections'          => $sections,
+            'assignments'       => $assignments,
+            'week'              => $week,
+            'totalWeeks'        => $totalWeeks,
+            'planStartDate'     => $planStartDate,
+            'periodSegments'    => $periodSegments,
             'currentWeekHeader' => $currentWeekHeader,
+            'templates'         => $templates,
+            'bestMatchId'       => $bestMatch?->id,
+            'hasAssignments'    => $hasAssignments,
         ]);
     }
 
@@ -153,6 +172,61 @@ class CoachPlanningController extends Controller
             ->update(['coach_notes' => $data['coach_notes'] ?? '']);
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Laad een trainingschema-template in voor een cliënt.
+     * Vervangt alle bestaande assignments als force=true.
+     */
+    public function loadTemplate(Request $request, User $client)
+    {
+        $data = $request->validate([
+            'template_id' => ['required', 'exists:training_plan_templates,id'],
+            'force'       => ['sometimes', 'boolean'],
+        ]);
+
+        $template = TrainingPlanTemplate::with('items')->findOrFail($data['template_id']);
+
+        if ($template->items->isEmpty()) {
+            return response()->json(['ok' => false, 'message' => 'Dit template bevat geen trainingen.'], 422);
+        }
+
+        $existingCount = TrainingAssignment::where('user_id', $client->id)->count();
+
+        if ($existingCount > 0 && empty($data['force'])) {
+            return response()->json([
+                'ok'      => false,
+                'confirm' => true,
+                'message' => "Deze cliënt heeft al {$existingCount} toegewezen trainingen. Wil je het bestaande schema overschrijven?",
+            ], 409);
+        }
+
+        // Verwijder bestaande assignments
+        if ($existingCount > 0) {
+            TrainingAssignment::where('user_id', $client->id)->delete();
+        }
+
+        // Kopieer template items naar assignments
+        $now = now();
+        $assignments = $template->items->map(fn($item) => [
+            'user_id'          => $client->id,
+            'training_card_id' => $item->training_card_id,
+            'week'             => $item->week,
+            'day'              => $item->day,
+            'sort_order'       => $item->sort_order,
+            'coach_notes'      => null,
+            'created_at'       => $now,
+            'updated_at'       => $now,
+        ])->toArray();
+
+        foreach (array_chunk($assignments, 100) as $chunk) {
+            TrainingAssignment::insert($chunk);
+        }
+
+        return response()->json([
+            'ok'      => true,
+            'message' => "Template \"{$template->name}\" ingeladen met " . count($assignments) . " trainingen.",
+        ]);
     }
 
     /**

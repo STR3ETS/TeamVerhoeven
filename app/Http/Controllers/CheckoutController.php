@@ -21,8 +21,6 @@ use App\Mail\NewIntakeNotification;
 use App\Mail\ClientWelcomeMail;
 use App\Mail\ClientRenewalNotification;
 use App\Models\SubscriptionRenewal;
-use App\Services\TrainingTemplateService;
-
 class CheckoutController extends Controller
 {
     /**
@@ -386,14 +384,6 @@ class CheckoutController extends Controller
                 }
             });
 
-            // Auto-assign training template voor pakket_a
-            if (($intake->payload['package'] ?? null) === 'pakket_a') {
-                $templateUser = User::find($intake->client_id);
-                if ($templateUser) {
-                    TrainingTemplateService::assignForNewClient($templateUser, $intake->payload);
-                }
-            }
-
             // Mailchimp sync NA commit (FAKE als "paid")
             try {
                 $contact = $intake->payload['contact'] ?? [];
@@ -705,11 +695,6 @@ class CheckoutController extends Controller
                 'order_id'     => $order?->id,
                 'order_status' => $order?->status,
             ]);
-
-            // Auto-assign training template voor pakket_a
-            if (($intake->payload['package'] ?? null) === 'pakket_a') {
-                TrainingTemplateService::assignForNewClient($user, $intake->payload);
-            }
 
             // Stel cancel_at in op de Stripe subscription zodat deze automatisch stopt
             try {

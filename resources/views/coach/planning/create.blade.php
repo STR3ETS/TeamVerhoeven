@@ -25,6 +25,33 @@
   Je bent een trainingsplan aan het maken voor {{ $client->name }}.
 </p>
 
+{{-- Schema inladen --}}
+<div class="mb-6 p-4 bg-white rounded-2xl border border-gray-300">
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <label for="template-select" class="text-sm font-semibold text-black/70 whitespace-nowrap">
+      Trainingschema inladen:
+    </label>
+    <div>
+      <select id="template-select" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-[#c8ab7a] focus:border-[#c8ab7a]">
+        @foreach($templates as $tpl)
+          <option value="{{ $tpl->id }}" {{ ($bestMatchId ?? null) == $tpl->id ? 'selected' : '' }}>
+            {{ $tpl->name }}{{ ($bestMatchId ?? null) == $tpl->id ? ' (aanbevolen)' : '' }}
+          </option>
+        @endforeach
+      </select>
+      <button
+        type="button"
+        id="btn-load-template"
+        class="px-4 py-1.5 bg-black text-white text-sm font-semibold rounded-lg hover:bg-black/80 transition"
+      >
+        <i class="fa-solid fa-download fa-sm mr-1"></i>
+        Schema inladen
+      </button>
+    </div>
+    <span id="template-status" class="text-xs text-gray-500 hidden"></span>
+  </div>
+</div>
+
 {{-- Week selector - scrollbaar bij veel weken --}}
 <div class="mb-4 max-h-32 overflow-y-auto">
   <div class="flex flex-wrap gap-2">
@@ -142,6 +169,66 @@
 <script>
   window.__assigned    = @json($assignments ?? []);
   window.__activeWeek  = {{ $week ?? 1 }};
+</script>
+
+{{-- Schema inladen logica --}}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btn      = document.getElementById('btn-load-template');
+  const select   = document.getElementById('template-select');
+  const status   = document.getElementById('template-status');
+  if (!btn || !select) return;
+
+  const LOAD_URL    = "{{ route('coach.clients.planning.load-template', $client) }}";
+  const CSRF_TOKEN  = '{{ csrf_token() }}';
+  const HAS_EXISTING = {{ $hasAssignments ? 'true' : 'false' }};
+
+  btn.addEventListener('click', async () => {
+    const templateId = select.value;
+    if (!templateId) return;
+
+    // Bevestiging als er al assignments bestaan
+    if (HAS_EXISTING) {
+      if (!confirm('Deze cliënt heeft al een trainingsschema. Wil je het bestaande schema overschrijven?')) {
+        return;
+      }
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin fa-sm mr-1"></i> Laden...';
+    status.classList.add('hidden');
+
+    try {
+      const res = await fetch(LOAD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+        body: JSON.stringify({ template_id: parseInt(templateId), force: true })
+      });
+
+      const json = await res.json();
+
+      if (res.ok && json.ok) {
+        status.textContent = json.message;
+        status.classList.remove('hidden', 'text-red-500');
+        status.classList.add('text-green-600');
+        // Herlaad pagina zodat het schema zichtbaar wordt
+        setTimeout(() => window.location.reload(), 500);
+      } else {
+        status.textContent = json.message || 'Er ging iets mis.';
+        status.classList.remove('hidden', 'text-green-600');
+        status.classList.add('text-red-500');
+      }
+    } catch (e) {
+      console.error(e);
+      status.textContent = 'Verbindingsfout. Probeer opnieuw.';
+      status.classList.remove('hidden', 'text-green-600');
+      status.classList.add('text-red-500');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-download fa-sm mr-1"></i> Schema inladen';
+    }
+  });
+});
 </script>
 
 {{-- === GSAP pinning (fix “witte ruimte onder”) === --}}

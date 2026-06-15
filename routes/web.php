@@ -65,6 +65,7 @@ Route::middleware(['auth', 'intake.complete'])->group(function () {
         Route::post('/clients/{client}/planning/reorder',  [CoachPlanningController::class, 'reorder'])->name('clients.planning.reorder');
         Route::post('/clients/{client}/planning/notes',    [CoachPlanningController::class, 'updateNotes'])->name('clients.planning.notes');
         Route::post('/clients/{client}/planning/generate', [CoachPlanningController::class, 'generate'])->name('clients.planning.generate')->whereNumber('client');
+        Route::post('/clients/{client}/planning/load-template', [CoachPlanningController::class, 'loadTemplate'])->name('clients.planning.load-template');
         Route::get('/claim-clients',                       [CoachClientController::class, 'claim'])->name('clients.claim');
         Route::post('/claim-clients/{profile}',            [CoachClientController::class, 'claimStore'])->name('clients.claim.store');
 
