@@ -74,7 +74,7 @@
 {{-- Nieuwe clients vandaag --}}
 @if($newClients->count())
     <div>
-        <h2 class="text-lg font-bold mb-2">Nieuwe aanmeldingen vandaag</h2>
+        <h2 class="text-lg font-bold mb-2">Nieuwe aanmeldingen</h2>
 
         <div class="space-y-3">
             @foreach($newClients as $client)
