@@ -13,9 +13,9 @@
     $today = now()->toDateString();
     $threeDaysAgo = now()->subDays(3)->toDateString();
 
-    // Nieuwe clients van vandaag OF verlengingen van de laatste 3 dagen:
+    // Nieuwe clients van de laatste 3 dagen OF verlengingen van de laatste 3 dagen:
     // - users.role = 'client'
-    // - users.created_at = vandaag (nieuwe aanmelding)
+    // - users.created_at >= 3 dagen geleden (nieuwe aanmelding)
     //   OF subscription_renewals.first_renewed_at >= 3 dagen geleden (verlenging)
     // - EN óf nog geen coach (coach_id = null)
     //   óf al gekoppeld aan deze coach (coach_id = huidige user id)
@@ -24,7 +24,7 @@
         ->leftJoin('subscription_renewals', 'subscription_renewals.user_id', '=', 'users.id')
         ->where('users.role', 'client')
         ->where(function ($q) use ($today, $threeDaysAgo) {
-            $q->whereDate('users.created_at', $today)  // Nieuwe aanmeldingen vandaag
+            $q->whereDate('users.created_at', '>=', $threeDaysAgo)  // Nieuwe aanmeldingen laatste 3 dagen
               ->orWhereDate('subscription_renewals.first_renewed_at', '>=', $threeDaysAgo);  // OF verlengingen laatste 3 dagen
         })
         ->where(function ($q) use ($coach) {
