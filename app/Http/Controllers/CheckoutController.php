@@ -109,14 +109,14 @@ class CheckoutController extends Controller
 
         // 2) Tarieven
         $per4w = match ($data['package']) {
-            'pakket_a' => 65,
+            'pakket_a' => 75,
             'pakket_b' => 90,
-            'pakket_c' => 140,
+            'pakket_c' => 150,
         };
         if ((int)$data['duration'] === 24) {
-            if ($data['package'] === 'pakket_a') $per4w -= 5;   // 60
+            if ($data['package'] === 'pakket_a') $per4w -= 5;   // 70
             if ($data['package'] === 'pakket_b') $per4w -= 10;   // 80
-            if ($data['package'] === 'pakket_c') $per4w -= 10;  // 130
+            if ($data['package'] === 'pakket_c') $per4w -= 5;   // 145
         }
         $monthlyAmount   = $per4w;
         $unitAmountCents = (int) round($monthlyAmount * 100);

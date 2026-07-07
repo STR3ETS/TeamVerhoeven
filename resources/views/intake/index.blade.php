@@ -316,11 +316,11 @@
                   [
                     'key' => 'pakket_c',
                     'title' => 'Elite Hyrox Pakket',
-                    'price' => ['label' => 'Vanaf 130,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €390 totaal bij 12 weken'],
-                    'badge' => '10,- korting per 4 weken bij 24 weken traject!',
-                    'cta' => ['discount' => '10,- Korting'],
-                    'price_12w' => 140,
-                    'price_24w' => 130,
+                    'price' => ['label' => 'Vanaf 145,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €450 totaal bij 12 weken'],
+                    'badge' => '5,- korting per 4 weken bij 24 weken traject!',
+                    'cta' => ['discount' => '5,- Korting'],
+                    'price_12w' => 150,
+                    'price_24w' => 145,
                     'feature_groups' => [
                       ['title' => 'Dashboard','items' => [
                         ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
@@ -409,11 +409,11 @@
                   [
                     'key' => 'pakket_a',
                     'title' => 'Basis Pakket',
-                    'price' => ['label' => 'Vanaf 60,-', 'suffix' => '/ per 4 weken', 'total' => '≈ 180 totaal bij 12 weken'],
+                    'price' => ['label' => 'Vanaf 70,-', 'suffix' => '/ per 4 weken', 'total' => '≈ €225 totaal bij 12 weken'],
                     'badge' => '5,- korting per 4 weken bij 24 weken traject!',
                     'cta' => ['discount' => '5,- Korting'],
-                    'price_12w' => 65,
-                    'price_24w' => 60,
+                    'price_12w' => 75,
+                    'price_24w' => 70,
                     'feature_groups' => [
                       ['title' => 'Dashboard','items' => [
                         ['text' => 'Toegang tot jouw persoonlijke omgeving', 'on' => true],
