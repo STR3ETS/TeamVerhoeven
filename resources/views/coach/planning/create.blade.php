@@ -31,13 +31,19 @@
     <label for="template-select" class="text-sm font-semibold text-black/70 whitespace-nowrap">
       Trainingschema inladen:
     </label>
-    <div>
+    <div class="flex items-center gap-2 flex-wrap">
       <select id="template-select" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-[#c8ab7a] focus:border-[#c8ab7a]">
         @foreach($templates as $tpl)
           <option value="{{ $tpl->id }}" {{ ($bestMatchId ?? null) == $tpl->id ? 'selected' : '' }}>
             {{ $tpl->name }}{{ ($bestMatchId ?? null) == $tpl->id ? ' (aanbevolen)' : '' }}
           </option>
         @endforeach
+      </select>
+      <label for="start-week-select" class="text-sm text-black/70 font-medium whitespace-nowrap">vanaf week</label>
+      <select id="start-week-select" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-[#c8ab7a] focus:border-[#c8ab7a] w-20">
+        @for($sw = 1; $sw <= ($totalWeeks ?? 1); $sw++)
+          <option value="{{ $sw }}">{{ $sw }}</option>
+        @endfor
       </select>
       <button
         type="button"
@@ -174,38 +180,48 @@
 {{-- Schema inladen logica --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const btn      = document.getElementById('btn-load-template');
-  const select   = document.getElementById('template-select');
-  const status   = document.getElementById('template-status');
-  if (!btn || !select) return;
+  const btn       = document.getElementById('btn-load-template');
+  const select    = document.getElementById('template-select');
+  const weekSelect = document.getElementById('start-week-select');
+  const status    = document.getElementById('template-status');
+  if (!btn || !select || !weekSelect) return;
 
   const LOAD_URL    = "{{ route('coach.clients.planning.load-template', $client) }}";
   const CSRF_TOKEN  = '{{ csrf_token() }}';
-  const HAS_EXISTING = {{ $hasAssignments ? 'true' : 'false' }};
 
   btn.addEventListener('click', async () => {
     const templateId = select.value;
+    const startWeek  = parseInt(weekSelect.value) || 1;
     if (!templateId) return;
-
-    // Bevestiging als er al assignments bestaan
-    if (HAS_EXISTING) {
-      if (!confirm('Deze cliënt heeft al een trainingsschema. Wil je het bestaande schema overschrijven?')) {
-        return;
-      }
-    }
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin fa-sm mr-1"></i> Laden...';
     status.classList.add('hidden');
 
     try {
-      const res = await fetch(LOAD_URL, {
+      // Eerste poging zonder force — server geeft 409 als er al trainingen staan
+      let res = await fetch(LOAD_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
-        body: JSON.stringify({ template_id: parseInt(templateId), force: true })
+        body: JSON.stringify({ template_id: parseInt(templateId), start_week: startWeek })
       });
 
-      const json = await res.json();
+      let json = await res.json();
+
+      // Als er bestaande trainingen zijn, vraag bevestiging en retry met force
+      if (res.status === 409 && json.confirm) {
+        if (!confirm(json.message)) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-download fa-sm mr-1"></i> Schema inladen';
+          return;
+        }
+        res = await fetch(LOAD_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+          body: JSON.stringify({ template_id: parseInt(templateId), start_week: startWeek, force: true })
+        });
+        json = await res.json();
+      }
 
       if (res.ok && json.ok) {
         status.textContent = json.message;

@@ -180,44 +180,59 @@ class CoachPlanningController extends Controller
      */
     public function loadTemplate(Request $request, User $client)
     {
+        $totalWeeks = (int) optional($client->clientProfile)->period_weeks ?: 12;
+
         $data = $request->validate([
             'template_id' => ['required', 'exists:training_plan_templates,id'],
+            'start_week'  => ['sometimes', 'integer', 'min:1', 'max:' . $totalWeeks],
             'force'       => ['sometimes', 'boolean'],
         ]);
 
+        $startWeek = (int) ($data['start_week'] ?? 1);
         $template = TrainingPlanTemplate::with('items')->findOrFail($data['template_id']);
 
         if ($template->items->isEmpty()) {
             return response()->json(['ok' => false, 'message' => 'Dit template bevat geen trainingen.'], 422);
         }
 
-        $existingCount = TrainingAssignment::where('user_id', $client->id)->count();
+        // Bereken welke weken geraakt worden
+        $templateMaxWeek = $template->items->max('week');
+        $affectedWeeks = range($startWeek, min($startWeek + $templateMaxWeek - 1, $totalWeeks));
+
+        $existingCount = TrainingAssignment::where('user_id', $client->id)
+            ->whereIn('week', $affectedWeeks)
+            ->count();
 
         if ($existingCount > 0 && empty($data['force'])) {
             return response()->json([
                 'ok'      => false,
                 'confirm' => true,
-                'message' => "Deze cliënt heeft al {$existingCount} toegewezen trainingen. Wil je het bestaande schema overschrijven?",
+                'message' => "Er staan al {$existingCount} trainingen in week {$startWeek}–" . end($affectedWeeks) . ". Wil je deze overschrijven?",
             ], 409);
         }
 
-        // Verwijder bestaande assignments
+        // Verwijder alleen assignments in de betreffende weken
         if ($existingCount > 0) {
-            TrainingAssignment::where('user_id', $client->id)->delete();
+            TrainingAssignment::where('user_id', $client->id)
+                ->whereIn('week', $affectedWeeks)
+                ->delete();
         }
 
-        // Kopieer template items naar assignments
+        // Kopieer template items met week-offset
+        $weekOffset = $startWeek - 1;
         $now = now();
-        $assignments = $template->items->map(fn($item) => [
-            'user_id'          => $client->id,
-            'training_card_id' => $item->training_card_id,
-            'week'             => $item->week,
-            'day'              => $item->day,
-            'sort_order'       => $item->sort_order,
-            'coach_notes'      => null,
-            'created_at'       => $now,
-            'updated_at'       => $now,
-        ])->toArray();
+        $assignments = $template->items
+            ->filter(fn($item) => $item->week + $weekOffset <= $totalWeeks)
+            ->map(fn($item) => [
+                'user_id'          => $client->id,
+                'training_card_id' => $item->training_card_id,
+                'week'             => $item->week + $weekOffset,
+                'day'              => $item->day,
+                'sort_order'       => $item->sort_order,
+                'coach_notes'      => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ])->toArray();
 
         foreach (array_chunk($assignments, 100) as $chunk) {
             TrainingAssignment::insert($chunk);
@@ -225,7 +240,7 @@ class CoachPlanningController extends Controller
 
         return response()->json([
             'ok'      => true,
-            'message' => "Template \"{$template->name}\" ingeladen met " . count($assignments) . " trainingen.",
+            'message' => "Template \"{$template->name}\" ingeladen vanaf week {$startWeek} met " . count($assignments) . " trainingen.",
         ]);
     }
 
