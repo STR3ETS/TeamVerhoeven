@@ -114,12 +114,12 @@
                             @if($mustIntake)
                                 <span class="p-2 rounded bg-[#a89066]/50 text-black/60 flex items-center gap-2 cursor-not-allowed pointer-events-none"
                                       title="Rond eerst je intake af">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black/50"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black/50"></i>
                                     <span class="font-semibold text-xs pt-0.5">Chat met je klant</span>
                                 </span>
                             @else
                                 <a href="{{ route('coach.threads.index')}}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black"></i>
                                     <span class="text-black font-semibold text-xs pt-0.5">Chat met je klant</span>
                                 </a>
                             @endif
@@ -174,12 +174,12 @@
                             @if($mustIntake)
                                 <span class="p-2 rounded bg-[#a89066]/50 text-black/60 flex items-center gap-2 cursor-not-allowed pointer-events-none"
                                       title="Rond eerst je intake af">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black/50"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black/50"></i>
                                     <span class="font-semibold text-xs pt-0.5">Chat met je coach</span>
                                 </span>
                             @else
                                 <a href="{{route('client.threads.index')}}" class="p-2 rounded bg-[#a89066] transition duration-300 flex items-center gap-2">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black"></i>
                                     <span class="text-black font-semibold text-xs pt-0.5">Chat met je coach</span>
                                 </a>
                             @endif
@@ -291,12 +291,12 @@
                             @if($mustIntake)
                                 <span class="p-2 rounded bg-[#a89066]/50 text-black/60 cursor-not-allowed pointer-events-none flex items-center gap-2"
                                       title="Rond eerst je intake af">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black/50"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black/50"></i>
                                     <span class="font-semibold text-xs pt-0.5">Chat met je klant</span>
                                 </span>
                             @else
                                 <a href="{{ route('coach.threads.index') }}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black"></i>
                                     <span class="text-black font-semibold text-xs pt-0.5">Chat met je klant</span>
                                 </a>
                             @endif
@@ -351,12 +351,12 @@
                             @if($mustIntake)
                                 <span class="p-2 rounded bg-[#a89066]/50 text-black/60 cursor-not-allowed pointer-events-none flex items-center gap-2"
                                       title="Rond eerst je intake af">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black/50"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black/50"></i>
                                     <span class="font-semibold text-xs pt-0.5">Chat met je coach</span>
                                 </span>
                             @else
                                 <a href="{{route('client.threads.index')}}" class="p-2 rounded hover:bg-[#a89066] transition duration-300 flex items-center gap-2">
-                                    <i class="min-w-4 fa-solid fa-messages fa-xs text-black"></i>
+                                    <i class="min-w-4 fa-solid fa-comments fa-xs text-black"></i>
                                     <span class="text-black font-semibold text-xs pt-0.5">Chat met je coach</span>
                                 </a>
                             @endif
