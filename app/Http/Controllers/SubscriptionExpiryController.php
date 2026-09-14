@@ -57,18 +57,28 @@ class SubscriptionExpiryController extends Controller
             return response()->json(['show_popup' => false]);
         }
 
-        // Haal de laatste intake op om de startdatum te bepalen
-        $latestIntake = Intake::where('client_id', $user->id)
+        // Haal de EERSTE intake met start_date op: dat is het anker van het abonnement.
+        // Bij een verlenging worden de weken opgeteld bij period_weeks in het profiel,
+        // dus de einddatum moet ALTIJD vanaf de oorspronkelijke startdatum gerekend worden.
+        // (Zelfde anker als de trainingsweek-berekening in TrainingWeekService/planning.)
+        // Voorheen werd hier de NIEUWSTE start_date gepakt, waardoor bij klanten met een
+        // extra renewal-intake de eerste periode dubbel telde en de popup nooit verscheen.
+        $anchorIntake = Intake::where('client_id', $user->id)
             ->whereNotNull('start_date')
-            ->orderByDesc('start_date')
+            ->orderBy('start_date')
             ->first();
 
-        if (!$latestIntake || !$latestIntake->start_date) {
+        if (!$anchorIntake || !$anchorIntake->start_date) {
             return response()->json(['show_popup' => false]);
         }
 
+        // Nieuwste intake alleen voor weergave van het huidige pakket in de popup
+        $latestIntake = Intake::where('client_id', $user->id)
+            ->orderByDesc('id')
+            ->first();
+
         // Bereken einddatum op basis van startdatum + period_weeks + gap weeks
-        $startDate = Carbon::parse($latestIntake->start_date);
+        $startDate = Carbon::parse($anchorIntake->start_date);
         $periodWeeks = (int) ($profile->period_weeks ?? 12);
         $renewalCount = Order::where('client_id', $user->id)->where('status', 'paid')->count();
         $gapWeeks = max(0, $renewalCount - 1);
@@ -95,7 +105,7 @@ class SubscriptionExpiryController extends Controller
                 'show_popup' => true,
                 'days_remaining' => (int) max(0, $daysUntilExpiry),
                 'end_date' => $endDate->format('d-m-Y'),
-                'package' => $latestIntake->payload['package'] ?? 'pakket_a',
+                'package' => $latestIntake?->payload['package'] ?? 'pakket_a',
                 'period_weeks' => $periodWeeks,
                 'is_expired' => $isExpired,
             ]);

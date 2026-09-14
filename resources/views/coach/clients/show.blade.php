@@ -356,7 +356,8 @@
 
 {{-- Wekelijkse check-in (alleen als Elite pakket) --}}
 @php
-  $clientIntake = $client->intakes()->whereNotNull('start_date')->orderByDesc('created_at')->first();
+  // Nieuwste intake = huidige pakket (start_date is hier niet relevant)
+  $clientIntake = $client->intakes()->orderByDesc('id')->first();
   $clientPackage = $clientIntake->payload['package'] ?? null;
   $weeklyCheckin = null;
   if ($clientPackage === 'pakket_c') {

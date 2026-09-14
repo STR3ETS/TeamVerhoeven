@@ -41,12 +41,21 @@ class CoachClientController extends Controller
             ->paginate(20);
 
         // Bereken abonnementsstatus voor elke client
-        // Haal ALLE intakes op (ook zonder start_date) om "Bezig" status te bepalen
+        // Haal ALLE intakes op (ook zonder start_date) om "Bezig" status te bepalen.
+        // Per client gebruiken we de intake met de OUDSTE start_date als anker:
+        // bij verlengingen worden de weken opgeteld bij period_weeks, dus de
+        // einddatum wordt altijd vanaf de oorspronkelijke startdatum gerekend.
+        // Heeft een client alleen intakes zonder start_date, dan pakken we er
+        // één daarvan zodat de "Bezig"/"Onbekend" logica blijft werken.
         $clientIds = $clients->pluck('id')->toArray();
         $intakes = Intake::whereIn('client_id', $clientIds)
-            ->orderByDesc('start_date')
+            ->orderBy('start_date')
             ->get()
-            ->keyBy('client_id');
+            ->groupBy('client_id')
+            ->map(function ($group) {
+                return $group->first(fn ($intake) => !is_null($intake->start_date))
+                    ?? $group->first();
+            });
 
         // Voeg subscription_status toe aan elke client
         foreach ($clients as $client) {

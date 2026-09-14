@@ -706,9 +706,11 @@ class CheckoutController extends Controller
                     if ($wasRenewal) {
                         // Bij verlenging: cancel_at = startdatum + alle weken + gap weken
                         $profile = ClientProfile::where('user_id', $user->id)->first();
+                        // Anker = OUDSTE start_date (originele startdatum); de weken in
+                        // period_weeks zijn het totaal over alle periodes samen.
                         $existingIntake = Intake::where('client_id', $user->id)
                             ->whereNotNull('start_date')
-                            ->orderByDesc('start_date')
+                            ->orderBy('start_date')
                             ->first();
 
                         if ($profile && $existingIntake) {

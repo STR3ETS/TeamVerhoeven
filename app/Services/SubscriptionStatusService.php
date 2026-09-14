@@ -30,10 +30,14 @@ class SubscriptionStatusService
             return null;
         }
 
-        // Get the latest intake with start_date
+        // Get the FIRST intake with start_date: dat is het anker van het abonnement.
+        // Bij verlengingen worden de weken opgeteld bij period_weeks in het profiel,
+        // dus de einddatum wordt ALTIJD vanaf de oorspronkelijke startdatum gerekend.
+        // (Niet de nieuwste intake pakken: een renewal-intake met eigen start_date
+        // zou de eerste periode dubbel laten tellen.)
         $intake = Intake::where('client_id', $user->id)
             ->whereNotNull('start_date')
-            ->orderByDesc('created_at')
+            ->orderBy('start_date')
             ->first();
 
         if (!$intake || !$intake->start_date) {
