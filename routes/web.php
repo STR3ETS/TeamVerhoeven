@@ -181,4 +181,9 @@ Route::get('/intake', function (Request $request) {
 
 Route::post('/intake/checkout', [CheckoutController::class, 'create'])->name('intake.checkout');
 Route::post('/intake/checkout/confirm', [CheckoutController::class, 'confirm'])->name('intake.checkout.confirm');
+
+// Stripe webhook: server-side registratie van betalingen (signature-verified, CSRF-vrij).
+// Zorgt dat aanmeldingen/verlengingen ook verwerkt worden als de klant na een
+// (iDEAL-)betaling niet netjes in de browser terugkeert.
+Route::post('/stripe/webhook', [CheckoutController::class, 'webhook'])->name('stripe.webhook');
 Route::post('/intake/progress', [CheckoutController::class, 'progress'])->name('intake.progress');

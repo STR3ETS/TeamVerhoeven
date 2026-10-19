@@ -15,8 +15,10 @@ return [
     */
 
     'stripe' => [
-        'key'    => env('STRIPE_KEY'),
-        'secret' => env('STRIPE_SECRET'),
+        'key'            => env('STRIPE_KEY'),
+        'secret'         => env('STRIPE_SECRET'),
+        // Signing secret van het webhook-endpoint (whsec_...), zie Stripe Dashboard
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
     'postmark' => [

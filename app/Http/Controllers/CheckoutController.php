@@ -531,6 +531,126 @@ class CheckoutController extends Controller
                 return response()->json(['message' => 'Betaling niet bevestigd.'], 422);
             }
 
+            // Gedeelde verwerking (ook gebruikt door de Stripe webhook).
+            // Idempotent: als de webhook de betaling al verwerkt heeft, doet dit niets meer.
+            $result = $this->fulfillPaidSession($session, 'confirm');
+
+            if (!($result['ok'] ?? false)) {
+                return response()->json(['message' => $result['message'] ?? 'Onvolledige betaaldata.'], 422);
+            }
+
+            // Reset subscription renew flag na succesvolle betaling
+            session()->forget('subscription_renew');
+
+            return response()->json(['ok' => true]);
+
+        } catch (\Throwable $e) {
+            Log::error('[checkout.confirm] exception', [
+                'message' => $e->getMessage(),
+                'trace'   => substr($e->getTraceAsString(), 0, 2000),
+            ]);
+            return response()->json(['message' => 'Er ging iets mis bij het bevestigen van de betaling.'], 500);
+        }
+    }
+
+    /**
+     * Stripe webhook: registreert betalingen server-side, onafhankelijk van de
+     * browser-terugkeer van de klant. Dit is de vangrail voor het geval de klant
+     * na een (iDEAL-)betaling niet netjes op de success-pagina terugkomt, of
+     * terugkomt zonder zijn oorspronkelijke sessie (bank-app / andere browser).
+     *
+     * Verwerkt: checkout.session.completed en checkout.session.async_payment_succeeded.
+     * Vereist STRIPE_WEBHOOK_SECRET in .env (signing secret van het webhook-endpoint).
+     */
+    public function webhook(Request $request)
+    {
+        $payload   = $request->getContent();
+        $sigHeader = $request->header('Stripe-Signature', '');
+        $secret    = config('services.stripe.webhook_secret');
+
+        if (!$secret) {
+            Log::error('[stripe.webhook] STRIPE_WEBHOOK_SECRET ontbreekt in .env/config');
+            return response()->json(['error' => 'webhook not configured'], 500);
+        }
+
+        try {
+            $event = \Stripe\Webhook::constructEvent($payload, $sigHeader, $secret);
+        } catch (\UnexpectedValueException $e) {
+            Log::warning('[stripe.webhook] invalid payload', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'invalid payload'], 400);
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            Log::warning('[stripe.webhook] invalid signature', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'invalid signature'], 400);
+        }
+
+        Log::info('[stripe.webhook] event ontvangen', ['type' => $event->type, 'event_id' => $event->id]);
+
+        // Alleen checkout-events verwerken; al het andere netjes bevestigen (200)
+        if (!in_array($event->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true)) {
+            return response()->json(['received' => true, 'handled' => false]);
+        }
+
+        $sessionStub = $event->data->object;
+
+        // Alleen sessies uit onze eigen intake/verleng-flow
+        if (($sessionStub->metadata['flow'] ?? null) !== '2befit_intake') {
+            Log::info('[stripe.webhook] genegeerd: andere flow', ['session_id' => $sessionStub->id ?? null]);
+            return response()->json(['received' => true, 'handled' => false]);
+        }
+
+        // Bij iDEAL kan checkout.session.completed binnenkomen terwijl de betaling
+        // nog 'unpaid' is; dan volgt later een async_payment_succeeded event.
+        if (($sessionStub->payment_status ?? null) !== 'paid') {
+            Log::info('[stripe.webhook] nog niet betaald, wachten op async event', [
+                'session_id'     => $sessionStub->id ?? null,
+                'payment_status' => $sessionStub->payment_status ?? null,
+            ]);
+            return response()->json(['received' => true, 'handled' => false]);
+        }
+
+        try {
+            // Verse kopie ophalen zodat we met exact dezelfde datastructuur werken als confirm()
+            $stripe  = new StripeClient(config('services.stripe.secret'));
+            $session = $stripe->checkout->sessions->retrieve($sessionStub->id, []);
+
+            $result = $this->fulfillPaidSession($session, 'webhook');
+
+            if (!($result['ok'] ?? false)) {
+                // Onvolledige metadata e.d. — permanent probleem, Stripe niet laten retryen
+                Log::error('[stripe.webhook] fulfillment overgeslagen', [
+                    'session_id' => $session->id,
+                    'reason'     => $result['reason'] ?? null,
+                ]);
+                return response()->json(['received' => true, 'handled' => false]);
+            }
+
+            return response()->json([
+                'received'          => true,
+                'handled'           => true,
+                'already_fulfilled' => $result['already_fulfilled'] ?? false,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[stripe.webhook] exception', [
+                'session_id' => $sessionStub->id ?? null,
+                'message'    => $e->getMessage(),
+            ]);
+            // 500 → Stripe probeert het later automatisch opnieuw
+            return response()->json(['error' => 'processing failed'], 500);
+        }
+    }
+
+    /**
+     * Gedeelde fulfillment van een betaalde Stripe checkout-sessie.
+     * Aangeroepen door confirm() (browser-terugkeer) én webhook() (server-side).
+     *
+     * - Idempotent: een order die al 'paid' is wordt overgeslagen, dus dubbele
+     *   aanroep (webhook + confirm, of Stripe-retries) is veilig.
+     * - Renewal-detectie op basis van DATA (bestaande user + profiel met weken),
+     *   niet op de browsersessie — die is na een iDEAL/bank-app redirect vaak kwijt.
+     */
+    public function fulfillPaidSession(\Stripe\Checkout\Session $session, string $source = 'confirm'): array
+    {
+        try {
             $intakeId = (int)($session->metadata['intake_id'] ?? 0);
             $orderId  = (int)($session->metadata['order_id']  ?? 0);
             $email    = $session->customer_details?->email
@@ -538,26 +658,43 @@ class CheckoutController extends Controller
                         ?? ($session->metadata['email'] ?? null);
 
             if (!$intakeId || !$email) {
-                Log::error('[checkout.confirm] missing metadata/email', [
+                Log::error('[checkout.fulfill] missing metadata/email', [
+                    'source'    => $source,
                     'intake_id' => $intakeId,
                     'order_id'  => $orderId,
                     'email'     => $email,
                     'metadata'  => $session->metadata ?? [],
                 ]);
-                return response()->json(['message' => 'Onvolledige betaaldata (intake/email).'], 422);
+                return [
+                    'ok'      => false,
+                    'reason'  => 'missing_metadata',
+                    'message' => 'Onvolledige betaaldata (intake/email).',
+                ];
             }
 
-            // Check of dit een renewal was (voor mail later)
-            $wasRenewal = session('subscription_renew', false);
-
-            [$user, $intake, $order] = DB::transaction(function () use ($intakeId, $orderId, $email, $wasRenewal) {
+            [$user, $intake, $order, $wasRenewal, $alreadyFulfilled] = DB::transaction(function () use ($intakeId, $orderId, $email, $source) {
                 $intake = Intake::lockForUpdate()->find($intakeId);
                 if (!$intake) {
-                    Log::error('[checkout.confirm.tx] intake not found', ['intake_id' => $intakeId]);
+                    Log::error('[checkout.fulfill.tx] intake not found', ['intake_id' => $intakeId, 'source' => $source]);
                     abort(404, 'Intake niet gevonden.');
                 }
 
                 $order = $orderId ? Order::lockForUpdate()->find($orderId) : null;
+
+                // Idempotency guard: al verwerkt (door webhook óf confirm) → niets meer doen.
+                if ($order && $order->status === 'paid') {
+                    Log::info('[checkout.fulfill.tx] order al verwerkt, overslaan', [
+                        'order_id' => $order->id,
+                        'source'   => $source,
+                    ]);
+                    return [null, $intake, $order, false, true];
+                }
+
+                // Renewal-detectie op DATA in plaats van de browsersessie:
+                // bestond de user al vóór deze betaling én heeft zijn profiel al
+                // een lopende/afgeronde periode (period_weeks > 0), dan is dit
+                // een verlenging en moeten de weken worden OPGETELD.
+                $userExisted = User::where('email', $email)->exists();
 
                 // 1) User
                 $nameFromPayload = $intake->payload['contact']['name'] ?? 'Nieuwe klant';
@@ -591,6 +728,10 @@ class CheckoutController extends Controller
 
                 $profile = ClientProfile::firstOrNew(['user_id' => $user->id]);
 
+                $wasRenewal = $userExisted
+                    && $profile->exists
+                    && ((int) ($profile->period_weeks ?? 0)) > 0;
+
                 $profile->birthdate        = $contact['dob'] ?? $profile->birthdate;
                 if (empty($profile->coach_id)) {
                     $profile->coach_id = ($contact['coach_id'] ?? null)
@@ -602,10 +743,11 @@ class CheckoutController extends Controller
                 // Bij renewal: weken optellen bij bestaande period_weeks
                 // Bij nieuwe intake: gewoon de gekozen weken gebruiken
                 $newWeeks = (int)($intake->payload['duration_weeks'] ?? 12);
-                if ($wasRenewal && $profile->exists && $profile->period_weeks > 0) {
+                if ($wasRenewal) {
                     $profile->period_weeks = $profile->period_weeks + $newWeeks;
-                    Log::info('[checkout.confirm] renewal: weeks added', [
+                    Log::info('[checkout.fulfill] renewal: weeks added', [
                         'user_id' => $user->id,
+                        'source' => $source,
                         'new_weeks' => $newWeeks,
                         'total_weeks' => $profile->period_weeks,
                     ]);
@@ -686,14 +828,23 @@ class CheckoutController extends Controller
                 $this->seedDefaultTodosForClient($user->id, $pkg, $dur);
                 $this->notifyNewUserIfNeeded($user, $intake, $order, $wasRenewal);
 
-                return [$user, $intake, $order];
+                return [$user, $intake, $order, $wasRenewal, false];
             });
 
-            Log::info('[checkout.confirm] done', [
+            if ($alreadyFulfilled) {
+                return [
+                    'ok'                => true,
+                    'already_fulfilled' => true,
+                ];
+            }
+
+            Log::info('[checkout.fulfill] done', [
+                'source'       => $source,
                 'user_id'      => $user->id,
                 'intake_id'    => $intake->id,
                 'order_id'     => $order?->id,
                 'order_status' => $order?->status,
+                'was_renewal'  => $wasRenewal,
             ]);
 
             // Stel cancel_at in op de Stripe subscription zodat deze automatisch stopt
@@ -701,7 +852,6 @@ class CheckoutController extends Controller
                 $subscriptionId = $session->subscription ?? null;
                 if ($subscriptionId) {
                     $periodWeeks = (int) ($session->metadata['duration'] ?? 12);
-                    $wasRenewal = session('subscription_renew', false);
 
                     if ($wasRenewal) {
                         // Bij verlenging: cancel_at = startdatum + alle weken + gap weken
@@ -744,11 +894,11 @@ class CheckoutController extends Controller
             if ($wasRenewal) {
                 $this->cancelOldStripeSubscription($user->id);
                 SubscriptionRenewal::recordRenewal($user->id);
-                Log::info('[checkout.confirm] renewal: old subscription canceled + renewal recorded', ['user_id' => $user->id]);
+                Log::info('[checkout.fulfill] renewal: old subscription canceled + renewal recorded', [
+                    'user_id' => $user->id,
+                    'source'  => $source,
+                ]);
             }
-
-            // Reset subscription renew flag na succesvolle betaling
-            session()->forget('subscription_renew');
 
             // Mailchimp sync NA commit (échte betaling)
             try {
@@ -777,17 +927,25 @@ class CheckoutController extends Controller
                     $this->syncMailchimpContact($mcEmail, $merge, $tags);
                 });
             } catch (\Throwable $e) {
-                Log::warning('[checkout.confirm] mailchimp schedule failed', ['e' => $e->getMessage()]);
+                Log::warning('[checkout.fulfill] mailchimp schedule failed', ['e' => $e->getMessage()]);
             }
 
-            return response()->json(['ok' => true]);
+            return [
+                'ok'                => true,
+                'already_fulfilled' => false,
+                'user_id'           => $user->id,
+                'was_renewal'       => $wasRenewal,
+            ];
 
         } catch (\Throwable $e) {
-            Log::error('[checkout.confirm] exception', [
+            Log::error('[checkout.fulfill] exception', [
+                'source'  => $source,
                 'message' => $e->getMessage(),
                 'trace'   => substr($e->getTraceAsString(), 0, 2000),
             ]);
-            return response()->json(['message' => 'Er ging iets mis bij het bevestigen van de betaling.'], 500);
+            // Doorgooien: confirm() geeft dan 500 aan de browser, webhook() geeft
+            // 500 aan Stripe zodat het event automatisch opnieuw geprobeerd wordt.
+            throw $e;
         }
     }
 

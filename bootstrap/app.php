@@ -19,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'intake.complete' => \App\Http\Middleware\EnsureIntakeComplete::class,
         ]);
 
+        // Stripe webhook heeft geen CSRF-token (verificatie gebeurt via de
+        // Stripe-Signature header met STRIPE_WEBHOOK_SECRET)
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+        ]);
+
         // Eventueel kun je hier ook group-aanpassingen doen:
         // $middleware->appendToGroup('web', [ ... ]);
     })
