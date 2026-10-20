@@ -107,7 +107,10 @@ class CheckoutController extends Controller
             'duration' => (int) $data['duration'],
         ]);
 
-        // 2) Tarieven
+        // 2) Tarieven — prijs is PER 4 WEKEN (zo staat het ook op de intakepagina:
+        //    "/ per 4 weken", "≈ €225 totaal bij 12 weken") en zo wordt er via Stripe
+        //    ook geïncasseerd (interval: 4 weken). Niet per kalendermaand: daar passen
+        //    er maar ~5,5 van in 24 weken i.p.v. 6 termijnen.
         $per4w = match ($data['package']) {
             'pakket_a' => 75,
             'pakket_b' => 90,
@@ -118,8 +121,7 @@ class CheckoutController extends Controller
             if ($data['package'] === 'pakket_b') $per4w -= 10;   // 80
             if ($data['package'] === 'pakket_c') $per4w -= 5;   // 145
         }
-        $monthlyAmount   = $per4w;
-        $unitAmountCents = (int) round($monthlyAmount * 100);
+        $unitAmountCents = (int) round($per4w * 100);
 
         $coachId = $data['coach_id'] ?? $this->findCoachIdByPreference($data['preferred_coach'] ?? 'none');
 
@@ -441,9 +443,9 @@ class CheckoutController extends Controller
         $stripe = new StripeClient(config('services.stripe.secret'));
         $periodWeeks = (int) $data['duration'];
         $productName = match ($data['package']) {
-            'pakket_a' => '2BeFit - Basis Pakket (maandelijks) ' . $periodWeeks . ' weken',
-            'pakket_b' => '2BeFit - Chasing Goals Pakket (maandelijks) ' . $periodWeeks . ' weken',
-            'pakket_c' => '2BeFit - Elite Hyrox Pakket (maandelijks) ' . $periodWeeks . ' weken',
+            'pakket_a' => '2BeFit - Basis Pakket (per 4 weken) ' . $periodWeeks . ' weken',
+            'pakket_b' => '2BeFit - Chasing Goals Pakket (per 4 weken) ' . $periodWeeks . ' weken',
+            'pakket_c' => '2BeFit - Elite Hyrox Pakket (per 4 weken) ' . $periodWeeks . ' weken',
         };
 
         $session = $stripe->checkout->sessions->create([
@@ -466,10 +468,11 @@ class CheckoutController extends Controller
                         'name' => $productName,
                         'metadata' => [
                             'duration_weeks' => (string) $data['duration'],
-                            'monthly_amount' => (string) $monthlyAmount,
+                            'per_4w_amount'  => (string) $per4w,
                         ],
                     ],
-                    'recurring'  => ['interval' => 'month', 'interval_count' => 1],
+                    // Incasso per 4 weken: 12 weken = exact 3 termijnen, 24 weken = exact 6
+                    'recurring'  => ['interval' => 'week', 'interval_count' => 4],
                     'unit_amount'=> $unitAmountCents,
                 ],
                 'quantity' => 1,
@@ -847,46 +850,45 @@ class CheckoutController extends Controller
                 'was_renewal'  => $wasRenewal,
             ]);
 
-            // Stel cancel_at in op de Stripe subscription zodat deze automatisch stopt
+            // Stel cancel_at in op de Stripe subscription zodat deze automatisch stopt.
+            // Incasso loopt per 4 weken; cancel_at = cyclusanker + gekochte weken, zodat
+            // het abonnement exact na 3 (12 wkn) of 6 (24 wkn) VOLLE termijnen eindigt,
+            // zonder verrekende restbedragen. Geldt voor nieuwe aankopen én verlengingen:
+            // elke aankoop = precies de gekochte weken aan incasso's. De toegangsperiode
+            // in de app (incl. gap-week bij verlenging) wordt daar los van berekend.
             try {
                 $subscriptionId = $session->subscription ?? null;
                 if ($subscriptionId) {
-                    $periodWeeks = (int) ($session->metadata['duration'] ?? 12);
+                    $periodWeeks  = (int) ($session->metadata['duration'] ?? 12);
+                    $stripe       = new StripeClient(config('services.stripe.secret'));
+                    $subscription = $stripe->subscriptions->retrieve($subscriptionId, []);
 
-                    if ($wasRenewal) {
-                        // Bij verlenging: cancel_at = startdatum + alle weken + gap weken
-                        $profile = ClientProfile::where('user_id', $user->id)->first();
-                        // Anker = OUDSTE start_date (originele startdatum); de weken in
-                        // period_weeks zijn het totaal over alle periodes samen.
-                        $existingIntake = Intake::where('client_id', $user->id)
-                            ->whereNotNull('start_date')
-                            ->orderBy('start_date')
-                            ->first();
-
-                        if ($profile && $existingIntake) {
-                            $startDate = Carbon::parse($existingIntake->start_date);
-                            $totalWeeks = (int) ($profile->period_weeks ?? $periodWeeks);
-                            $renewalCount = Order::where('client_id', $user->id)->where('status', 'paid')->count();
-                            $gapWeeks = max(0, $renewalCount - 1);
-                            $cancelAt = $startDate->copy()->addWeeks($totalWeeks + $gapWeeks)->timestamp;
-                        } else {
-                            $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
-                        }
-                    } else {
-                        $cancelAt = now()->addWeeks($periodWeeks)->timestamp;
-                    }
+                    // billing_cycle_anchor = start van de eerste termijn; termijnen lopen
+                    // bij een week-interval exact per 28 dagen vanaf dit anker.
+                    $anchorTs = (int) ($subscription->billing_cycle_anchor
+                        ?? $subscription->start_date
+                        ?? now()->timestamp);
+                    $cancelAt = $anchorTs + ($periodWeeks * 7 * 86400);
 
                     $stripe->subscriptions->update($subscriptionId, [
                         'cancel_at' => $cancelAt,
                     ]);
-                    Log::info('[checkout.confirm] subscription cancel_at set', [
+                    Log::info('[checkout.fulfill] subscription cancel_at set', [
                         'subscription_id' => $subscriptionId,
-                        'cancel_at' => date('Y-m-d', $cancelAt),
-                        'is_renewal' => $wasRenewal,
+                        'cancel_at'       => date('Y-m-d H:i', $cancelAt),
+                        'period_weeks'    => $periodWeeks,
+                        'is_renewal'      => $wasRenewal,
+                        'source'          => $source,
                     ]);
                 }
             } catch (\Throwable $e) {
-                Log::warning('[checkout.confirm] failed to set cancel_at', ['error' => $e->getMessage()]);
+                // Niet fataal voor de klant (betaling is verwerkt), maar wél een signaal:
+                // zonder cancel_at loopt het abonnement door tot iemand het handmatig stopt.
+                Log::error('[checkout.fulfill] failed to set cancel_at', [
+                    'subscription_id' => $session->subscription ?? null,
+                    'error'           => $e->getMessage(),
+                    'source'          => $source,
+                ]);
             }
 
             // Bij renewal: annuleer oude Stripe subscription + registreer verlenging
