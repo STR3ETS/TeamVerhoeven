@@ -1589,17 +1589,10 @@
           ftp_wkg:(this.form.ftp_mode==='w' ? this.computedFtpWkg : this.form.ftp_wkg),
         };
 
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        fetch('{{ route('intake.checkout') }}', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', 'Accept':'application/json', ...(csrf?{'X-CSRF-TOKEN':csrf}:{}) },
-          credentials:'same-origin',
-          body:JSON.stringify(payload)
-        })
+        this.postJson('{{ route('intake.checkout') }}', payload)
         .then(async res=>{
           if(!res.ok){
-            const t = await res.text().catch(()=>''), msg = (JSON.parse(t||'{}').message) || 'Kon betaalpagina niet starten.';
-            throw new Error(msg);
+            throw new Error(await this.errorMessage(res, 'Kon betaalpagina niet starten.'));
           }
           return res.json();
         })
@@ -1631,17 +1624,10 @@
 
       // --- NA BETALING: session_id bevestigen ---
       async doConfirm(sessionId){
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         try{
-          const res = await fetch('{{ route('intake.checkout.confirm') }}', {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json', 'Accept':'application/json', ...(csrf?{'X-CSRF-TOKEN':csrf}:{}) },
-            credentials:'same-origin',
-            body: JSON.stringify({ session_id: sessionId })
-          });
+          const res = await this.postJson('{{ route('intake.checkout.confirm') }}', { session_id: sessionId });
           if (!res.ok){
-            const t = await res.text().catch(()=>''), msg = (JSON.parse(t||'{}').message) || 'Betaling kon niet bevestigd worden.';
-            throw new Error(msg);
+            throw new Error(await this.errorMessage(res, 'Betaling kon niet bevestigd worden.'));
           }
           sessionStorage.setItem('intakeConfirmed','1');
 
@@ -1681,22 +1667,51 @@
         const payload=this.buildProgressPayload(stepIndex);
         if (Object.values(payload).every(v => v===null || v===undefined || v==='')) return Promise.resolve();
 
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         try{
-          const res = await fetch('{{ route('intake.progress') }}', {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json', 'Accept':'application/json', ...(csrf?{'X-CSRF-TOKEN':csrf}:{}) },
-            credentials:'same-origin',
-            body: JSON.stringify(payload)
-          });
+          const res = await this.postJson('{{ route('intake.progress') }}', payload);
           if (!res.ok){
-            const t=await res.text().catch(()=>''), msg=(JSON.parse(t||'{}').message)||'Kon voortgang niet opslaan.';
-            throw new Error(msg);
+            throw new Error(await this.errorMessage(res, 'Kon voortgang niet opslaan.'));
           }
         } catch(err){
           console.error('Progress save error', err);
           this.errors.general = err.message || 'Opslaan van voortgang is mislukt.';
         }
+      },
+
+      // --- POST met CSRF; bij 419 (sessie verlopen) verse token halen en 1x opnieuw ---
+      async postJson(url, body){
+        const send = () => {
+          const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+          return fetch(url, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', 'Accept':'application/json', ...(csrf?{'X-CSRF-TOKEN':csrf}:{}) },
+            credentials:'same-origin',
+            body: JSON.stringify(body)
+          });
+        };
+
+        let res = await send();
+        if (res.status === 419) {
+          try{
+            const r = await fetch('{{ route('csrf.token') }}', {
+              credentials:'same-origin', cache:'no-store', headers:{ 'Accept':'application/json' }
+            });
+            const token = r.ok ? (await r.json())?.token : null;
+            if (token) {
+              document.querySelectorAll('meta[name="csrf-token"]').forEach(m => m.setAttribute('content', token));
+              res = await send();
+            }
+          } catch(e){ console.error('CSRF refresh failed', e); }
+        }
+        return res;
+      },
+
+      async errorMessage(res, fallback){
+        if (res.status === 419) {
+          return 'Je sessie is verlopen. Ververs de pagina en probeer het opnieuw, je ingevulde gegevens blijven bewaard.';
+        }
+        const t = await res.text().catch(()=> '');
+        try { return JSON.parse(t || '{}').message || fallback; } catch(e) { return fallback; }
       },
 
       // --- intl-tel-input ---

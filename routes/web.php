@@ -187,3 +187,11 @@ Route::post('/intake/checkout/confirm', [CheckoutController::class, 'confirm'])-
 // (iDEAL-)betaling niet netjes in de browser terugkeert.
 Route::post('/stripe/webhook', [CheckoutController::class, 'webhook'])->name('stripe.webhook');
 Route::post('/intake/progress', [CheckoutController::class, 'progress'])->name('intake.progress');
+
+// Verse CSRF-token voor lang openstaande pagina's (sessie verlopen → 419).
+// De intake haalt deze op en probeert de POST één keer opnieuw.
+Route::get('/csrf-token', function () {
+    return response()
+        ->json(['token' => csrf_token()])
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+})->name('csrf.token');
